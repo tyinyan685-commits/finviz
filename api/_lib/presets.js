@@ -5,7 +5,6 @@ export const presets = [
     description: "找趋势向上、成交活跃、规模不太小的股票，适合发现资金正在集中的方向。",
     fmpParams: {
       marketCapMoreThan: 2_000_000_000,
-      marketCapLowerThan: 500_000_000_000,
       volumeMoreThan: 500_000,
       priceMoreThan: 10,
       isActivelyTrading: true,
@@ -34,7 +33,6 @@ export const presets = [
     description: "找流动性好、规模较大、价格回调后可能接近观察区的股票。",
     fmpParams: {
       marketCapMoreThan: 10_000_000_000,
-      marketCapLowerThan: 800_000_000_000,
       volumeMoreThan: 800_000,
       priceMoreThan: 15,
       isActivelyTrading: true,
@@ -49,7 +47,6 @@ export const presets = [
     description: "捕捉突然被市场注意到的股票，之后必须用新闻和财报解释原因。",
     fmpParams: {
       marketCapMoreThan: 500_000_000,
-      marketCapLowerThan: 50_000_000_000,
       volumeMoreThan: 1_000_000,
       priceMoreThan: 5,
       isActivelyTrading: true,
@@ -64,7 +61,6 @@ export const presets = [
     description: "财报前后波动通常更大，适合做风险提醒和研究排程。",
     fmpParams: {
       marketCapMoreThan: 2_000_000_000,
-      marketCapLowerThan: 300_000_000_000,
       volumeMoreThan: 500_000,
       priceMoreThan: 10,
       isActivelyTrading: true,

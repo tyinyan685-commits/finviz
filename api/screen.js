@@ -64,12 +64,14 @@ function strategyScore(presetId, stock) {
   const change = stock.changesPercentage ?? 0;
   const relVol = stock.relativeVolume ?? 1;
   const marketCapBonus = Math.min(12, Math.log10(Math.max(stock.marketCap ?? 1, 1_000_000_000)) - 8);
+  const volumeBonus = Math.min(12, Math.max(0, Math.log10(Math.max(stock.volume ?? 1, 1)) - 5));
 
   if (presetId === "momentum_breakout") {
     return (
       45 +
       Math.min(25, Math.max(0, change) * 3) +
       Math.min(18, Math.max(0, relVol - 1) * 8) +
+      volumeBonus +
       ((stock.distance50 ?? 0) > 0 ? 8 : -8) +
       ((stock.distance200 ?? 0) > 0 ? 8 : -8) +
       marketCapBonus
@@ -102,6 +104,7 @@ function strategyScore(presetId, stock) {
     return (
       38 +
       Math.min(35, Math.max(0, relVol - 1) * 18) +
+      volumeBonus +
       Math.min(16, Math.abs(change) * 2) +
       (stock.volume && stock.volume > 2_000_000 ? 8 : 0) +
       marketCapBonus
@@ -140,16 +143,42 @@ function strategyReasons(presetId, stock) {
 
 function applyPresetFilter(presetId, stocks) {
   if (presetId === "momentum_breakout") {
-    return stocks.filter((stock) => (stock.changesPercentage ?? -999) > 0 && (stock.distance50 ?? -999) > 0);
+    return stocks.filter(
+      (stock) =>
+        (stock.marketCap ?? 0) < 500_000_000_000 &&
+        (stock.volume ?? 0) > 500_000 &&
+        (stock.price ?? 0) > 10 &&
+        (stock.changesPercentage === null || stock.changesPercentage > 0) &&
+        (stock.distance50 === null || stock.distance50 > 0)
+    );
   }
   if (presetId === "quality_growth") {
-    return stocks.filter((stock) => (stock.eps ?? -1) > 0 && (!stock.pe || (stock.pe > 5 && stock.pe < 80)));
+    return stocks.filter(
+      (stock) =>
+        (stock.marketCap ?? 0) > 10_000_000_000 &&
+        (stock.eps === null || stock.eps > 0) &&
+        (!stock.pe || (stock.pe > 5 && stock.pe < 80))
+    );
   }
   if (presetId === "pullback_watch") {
-    return stocks.filter((stock) => (stock.distance200 ?? -999) > 0 && (stock.changesPercentage ?? 999) < 2);
+    return stocks.filter(
+      (stock) =>
+        (stock.marketCap ?? 0) < 800_000_000_000 &&
+        (stock.marketCap ?? 0) > 10_000_000_000 &&
+        (stock.distance200 === null || stock.distance200 > 0) &&
+        (stock.changesPercentage === null || stock.changesPercentage < 2)
+    );
   }
   if (presetId === "unusual_volume") {
-    return stocks.filter((stock) => (stock.relativeVolume ?? 0) > 1.1 || Math.abs(stock.changesPercentage ?? 0) > 4);
+    return stocks.filter(
+      (stock) =>
+        (stock.marketCap ?? 0) < 50_000_000_000 &&
+        (stock.volume ?? 0) > 1_000_000 &&
+        (stock.relativeVolume === null || stock.relativeVolume > 1.1 || Math.abs(stock.changesPercentage ?? 0) > 4)
+    );
+  }
+  if (presetId === "earnings_watch") {
+    return stocks.filter((stock) => (stock.marketCap ?? 0) < 300_000_000_000);
   }
   return stocks;
 }
