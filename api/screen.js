@@ -160,13 +160,22 @@ async function quoteSymbols(symbols) {
   for (let index = 0; index < symbols.length; index += 80) {
     chunks.push(symbols.slice(index, index + 80));
   }
-  const results = await Promise.all(chunks.map((chunk) => fmpV3Get(`/quote/${chunk.join(",")}`)));
+  const results = await Promise.all(
+    chunks.map(async (chunk) => {
+      const symbolList = chunk.join(",");
+      try {
+        return await fmpV3Get(`/quote/${symbolList}`);
+      } catch {
+        return fmpGet("/quote", { symbol: symbolList });
+      }
+    })
+  );
   return results.flat();
 }
 
 async function loadEarningsWatch(limit) {
   const calendar = await optional(
-    fmpV3Get("/earning_calendar", {
+    fmpGet("/earnings-calendar", {
       from: today(0),
       to: today(14)
     }),
@@ -185,23 +194,31 @@ export default async function handler(request, response) {
   const limit = Number(request.query.limit || preset.fmpParams.limit || 60);
 
   try {
-    const raw =
+    let raw =
       preset.id === "earnings_watch"
         ? []
         : await fmpGet("/company-screener", {
             ...preset.fmpParams,
             limit: Math.max(limit * 6, 300)
           });
+    if (preset.id === "earnings_watch") {
+      raw = await fmpGet("/company-screener", {
+        ...preset.fmpParams,
+        limit: Math.max(limit * 6, 300)
+      });
+    }
     const symbols = [...new Set(raw.map((row) => row.symbol).filter(Boolean))];
     const quotes = await quoteSymbols(symbols);
     const quoteMap = new Map(quotes.map((quote) => [quote.symbol, quote]));
 
-    const baseStocks =
-      preset.id === "earnings_watch"
-        ? await loadEarningsWatch(limit)
-        : raw
-            .map((row) => normalizeStock(row, quoteMap.get(row.symbol)))
-            .filter((stock) => stock.symbol && stock.price && isCommonStock(rowFromStock(stock), stock));
+    let baseStocks = raw
+      .map((row) => normalizeStock(row, quoteMap.get(row.symbol)))
+      .filter((stock) => stock.symbol && stock.price && isCommonStock(rowFromStock(stock), stock));
+
+    if (preset.id === "earnings_watch") {
+      const earningsStocks = await loadEarningsWatch(limit);
+      if (earningsStocks.length) baseStocks = earningsStocks;
+    }
 
     const stocks = applyPresetFilter(preset.id, baseStocks)
       .map((stock) => {
