@@ -221,7 +221,7 @@ async function loadEarningsWatch(limit) {
 export default async function handler(request, response) {
   const preset = getPreset(request.query.preset);
   const limit = Number(request.query.limit || preset.fmpParams.limit || 60);
-  const rawLimit = preset.id === "unusual_volume" ? Math.max(limit * 30, 1500) : Math.max(limit * 6, 300);
+  const rawLimit = preset.id === "unusual_volume" ? 500 : Math.max(limit * 6, 300);
 
   try {
     let raw =
