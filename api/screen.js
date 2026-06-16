@@ -221,6 +221,7 @@ async function loadEarningsWatch(limit) {
 export default async function handler(request, response) {
   const preset = getPreset(request.query.preset);
   const limit = Number(request.query.limit || preset.fmpParams.limit || 60);
+  const rawLimit = preset.id === "unusual_volume" ? Math.max(limit * 30, 1500) : Math.max(limit * 6, 300);
 
   try {
     let raw =
@@ -228,12 +229,12 @@ export default async function handler(request, response) {
         ? []
         : await fmpGet("/company-screener", {
             ...preset.fmpParams,
-            limit: Math.max(limit * 6, 300)
+            limit: rawLimit
           });
     if (preset.id === "earnings_watch") {
       raw = await fmpGet("/company-screener", {
         ...preset.fmpParams,
-        limit: Math.max(limit * 6, 300)
+        limit: rawLimit
       });
     }
     const symbols = [...new Set(raw.map((row) => row.symbol).filter(Boolean))];
@@ -249,7 +250,13 @@ export default async function handler(request, response) {
       if (earningsStocks.length) baseStocks = earningsStocks;
     }
 
-    const stocks = applyPresetFilter(preset.id, baseStocks)
+    let filteredStocks = applyPresetFilter(preset.id, baseStocks);
+    if (preset.id === "unusual_volume" && !filteredStocks.length) {
+      filteredStocks = baseStocks.filter((stock) => (stock.marketCap ?? 0) < 300_000_000_000 && (stock.volume ?? 0) > 1_000_000);
+    }
+    if (!filteredStocks.length) filteredStocks = baseStocks;
+
+    const stocks = filteredStocks
       .map((stock) => {
         const strategy = strategyReasons(preset.id, stock);
         return {
