@@ -7,9 +7,17 @@ import { enrichStocksWithTechnical } from "./_lib/technical.js";
 const NON_COMMON_STOCK_TERMS =
   /\b(etf|fund|trust|index|proshares|ishares|vanguard|spdr|invesco|direxion|yieldmax|warrant|rights|units|preferred|notes due|etn|bond)\b/i;
 const NON_COMMON_SYMBOL_SUFFIX = /(\.W|\.WS|\.WT|\.U|-WS|-WT|-U)$/i;
+const SCREEN_CACHE_TTL_MS = 5 * 60 * 1000;
+const screenCache = new Map();
 
 function today(offsetDays = 0) {
   return new Date(Date.now() + offsetDays * 86400000).toISOString().slice(0, 10);
+}
+
+function parseLimit(value, fallback) {
+  const limit = Number(value ?? fallback);
+  if (!Number.isFinite(limit)) return fallback;
+  return Math.max(1, Math.min(100, Math.round(limit)));
 }
 
 function ratio(numerator, denominator) {
@@ -247,6 +255,31 @@ function technicalLimitForPreset(presetId) {
   return 70;
 }
 
+function fundamentalLimitForScreen(limit) {
+  return Math.min(40, Math.max(12, limit * 2));
+}
+
+function cacheKey(presetId, limit) {
+  return `${presetId}:${limit}`;
+}
+
+function getCachedScreen(key) {
+  const cached = screenCache.get(key);
+  if (!cached || Date.now() - cached.createdAt > SCREEN_CACHE_TTL_MS) return null;
+  return {
+    ...cached.data,
+    dataQuality: {
+      ...cached.data.dataQuality,
+      cached: true,
+      cacheAgeSeconds: Math.round((Date.now() - cached.createdAt) / 1000)
+    }
+  };
+}
+
+function setCachedScreen(key, data) {
+  screenCache.set(key, { createdAt: Date.now(), data });
+}
+
 async function quoteSymbols(symbols) {
   if (!symbols.length) return [];
   const chunks = [];
@@ -284,10 +317,21 @@ async function loadEarningsWatch(limit) {
 
 export default async function handler(request, response) {
   const preset = getPreset(request.query.preset);
-  const limit = Number(request.query.limit || preset.fmpParams.limit || 60);
+  const limit = parseLimit(request.query.limit, preset.fmpParams.limit || 60);
   const rawLimit = preset.id === "unusual_volume" ? 500 : Math.max(limit * 6, 300);
+  const key = cacheKey(preset.id, limit);
+  const shouldRefresh = request.query.refresh === "1";
 
   try {
+    if (!shouldRefresh) {
+      const cached = getCachedScreen(key);
+      if (cached) {
+        response.setHeader("X-Investment-Radar-Cache", "HIT");
+        response.status(200).json(cached);
+        return;
+      }
+    }
+
     let raw =
       preset.id === "earnings_watch"
         ? []
@@ -321,7 +365,7 @@ export default async function handler(request, response) {
       8
     );
     if (preset.id === "quality_growth") {
-      baseStocks = await enrichStocksWithFundamentals(baseStocks, 40, 6);
+      baseStocks = await enrichStocksWithFundamentals(baseStocks, fundamentalLimitForScreen(limit), 6);
     }
 
     let filteredStocks = applyPresetFilter(preset.id, baseStocks);
@@ -343,17 +387,23 @@ export default async function handler(request, response) {
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
 
-    response.status(200).json({
+    const payload = {
       preset,
       generatedAt: new Date().toISOString(),
       dataQuality: {
         technicalReady: stocks.filter((stock) => stock.technicalReady).length,
         fundamentalReady: stocks.filter((stock) => stock.fundamentalReady).length,
         total: stocks.length,
-        note: "技术指标来自 FMP 历史价格自行计算；估值/EPS 取决于当前 FMP 套餐的 quote/key metrics 字段可用性。"
+        cached: false,
+        cacheTtlSeconds: Math.round(SCREEN_CACHE_TTL_MS / 1000),
+        note: "技术指标来自 FMP 历史价格自行计算；基本面来自 FMP key metrics 和年度财报；估值/EPS 取决于当前 FMP 套餐字段可用性。"
       },
       stocks
-    });
+    };
+
+    setCachedScreen(key, payload);
+    response.setHeader("X-Investment-Radar-Cache", "MISS");
+    response.status(200).json(payload);
   } catch (error) {
     response.status(error.statusCode || 500).json({ error: error.message || "Unknown error" });
   }

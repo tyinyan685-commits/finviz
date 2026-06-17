@@ -54,6 +54,7 @@ FMP_API_KEY=你的_FMP_API_KEY
 - “优质成长”雷达会额外读取 FMP `key-metrics-ttm`、年度 income statement、balance sheet 和 cash flow，计算收入增长、净利润增长、经营利润率、自由现金流收益率、ROIC/ROE、EV/EBITDA、债务/权益等指标。
 - 对 ADR/海外公司，如果财报币种不是 USD，系统不会直接用本币自由现金流除以美元市值，避免跨币种收益率失真。
 - 基本面数据带有短期服务端内存缓存，用于减少重复点击时的 API 调用；Vercel 冷启动后会重新拉取。
+- 筛选结果带有 5 分钟服务端内存缓存，普通刷新优先复用结果；如需强制刷新，可请求 `/api/screen?preset=quality_growth&refresh=1`。
 - Finviz 目前作为人工复核入口，不作为自动数据源。
 - 系统会过滤明显的 ETF、基金、权证、单位类、优先股、债券/票据类标的；仍建议对异常名称或价格做人工复核。
 - 估值、EPS、PE、基本面等字段取决于当前 FMP 套餐和 endpoint 权限，字段缺失时雷达会降级为价格/成交量/技术面优先。
