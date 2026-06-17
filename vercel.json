@@ -6,7 +6,29 @@
   ],
   "functions": {
     "api/*.js": {
-      "maxDuration": 20
+      "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/snapshot?preset=momentum_breakout&limit=15",
+      "schedule": "30 22 * * 1-5"
+    },
+    {
+      "path": "/api/snapshot?preset=quality_growth&limit=15",
+      "schedule": "45 22 * * 1-5"
+    },
+    {
+      "path": "/api/snapshot?preset=pullback_watch&limit=15",
+      "schedule": "0 23 * * 1-5"
+    },
+    {
+      "path": "/api/snapshot?preset=unusual_volume&limit=15",
+      "schedule": "15 23 * * 1-5"
+    },
+    {
+      "path": "/api/snapshot?preset=earnings_watch&limit=15",
+      "schedule": "30 23 * * 1-5"
+    }
+  ]
 }

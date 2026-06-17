@@ -78,6 +78,7 @@ h3 { margin-top: 18px; font-size: 13px; }
   font-weight: 700;
 }
 .ghost { padding: 7px 10px; background: #fff; color: var(--text); }
+.full { width: 100%; margin-top: 12px; }
 .ghost:hover, .preset:hover, .link-button:hover { border-color: var(--accent); }
 .link-button {
   display: inline-flex;

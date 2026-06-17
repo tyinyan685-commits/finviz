@@ -249,10 +249,11 @@ function prefilterBeforeTechnical(presetId, stocks) {
   return stocks;
 }
 
-function technicalLimitForPreset(presetId) {
-  if (presetId === "quality_growth") return 40;
-  if (presetId === "unusual_volume") return 90;
-  return 70;
+function technicalLimitForPreset(presetId, limit) {
+  const requested = Math.max(20, limit * 2);
+  if (presetId === "quality_growth") return Math.min(40, requested);
+  if (presetId === "unusual_volume") return Math.min(90, requested);
+  return Math.min(70, requested);
 }
 
 function fundamentalLimitForScreen(limit) {
@@ -315,94 +316,100 @@ async function loadEarningsWatch(limit) {
     .filter((stock) => stock.symbol && stock.price && stock.marketCap && stock.marketCap > 500_000_000);
 }
 
-export default async function handler(request, response) {
-  const preset = getPreset(request.query.preset);
-  const limit = parseLimit(request.query.limit, preset.fmpParams.limit || 60);
+export async function runScreen({ presetId, limit: requestedLimit, refresh = false } = {}) {
+  const preset = getPreset(presetId);
+  const limit = parseLimit(requestedLimit, preset.fmpParams.limit || 60);
   const rawLimit = preset.id === "unusual_volume" ? 500 : Math.max(limit * 6, 300);
   const key = cacheKey(preset.id, limit);
-  const shouldRefresh = request.query.refresh === "1";
 
+  if (!refresh) {
+    const cached = getCachedScreen(key);
+    if (cached) {
+      return { payload: cached, cacheStatus: "HIT" };
+    }
+  }
+
+  let raw =
+    preset.id === "earnings_watch"
+      ? []
+      : await fmpGet("/company-screener", {
+          ...preset.fmpParams,
+          limit: rawLimit
+        });
+  if (preset.id === "earnings_watch") {
+    raw = await fmpGet("/company-screener", {
+      ...preset.fmpParams,
+      limit: rawLimit
+    });
+  }
+  const symbols = [...new Set(raw.map((row) => row.symbol).filter(Boolean))];
+  const quotes = await quoteSymbols(symbols);
+  const quoteMap = new Map(quotes.map((quote) => [quote.symbol, quote]));
+
+  let baseStocks = raw
+    .map((row) => normalizeStock(row, quoteMap.get(row.symbol)))
+    .filter((stock) => stock.symbol && stock.price && isCommonStock(rowFromStock(stock), stock));
+
+  if (preset.id === "earnings_watch") {
+    const earningsStocks = await loadEarningsWatch(limit);
+    if (earningsStocks.length) baseStocks = earningsStocks;
+  }
+
+  const prefilteredStocks = prefilterBeforeTechnical(preset.id, baseStocks);
+  baseStocks = await enrichStocksWithTechnical(
+    prefilteredStocks.length ? prefilteredStocks : baseStocks,
+    technicalLimitForPreset(preset.id, limit),
+    8
+  );
+  if (preset.id === "quality_growth") {
+    baseStocks = await enrichStocksWithFundamentals(baseStocks, fundamentalLimitForScreen(limit), 6);
+  }
+
+  let filteredStocks = applyPresetFilter(preset.id, baseStocks);
+  if (preset.id === "unusual_volume" && !filteredStocks.length) {
+    filteredStocks = baseStocks.filter((stock) => (stock.marketCap ?? 0) < 300_000_000_000 && (stock.volume ?? 0) > 1_000_000);
+  }
+  if (!filteredStocks.length) filteredStocks = baseStocks;
+
+  const stocks = filteredStocks
+    .map((stock) => {
+      const strategy = strategyReasons(preset.id, stock);
+      return {
+        ...stock,
+        score: Math.max(0, Math.min(100, Math.round(strategyScore(preset.id, stock)))),
+        reasons: strategy.reasons,
+        risks: strategy.risks
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+
+  const payload = {
+    preset,
+    generatedAt: new Date().toISOString(),
+    dataQuality: {
+      technicalReady: stocks.filter((stock) => stock.technicalReady).length,
+      fundamentalReady: stocks.filter((stock) => stock.fundamentalReady).length,
+      total: stocks.length,
+      cached: false,
+      cacheTtlSeconds: Math.round(SCREEN_CACHE_TTL_MS / 1000),
+      note: "技术指标来自 FMP 历史价格自行计算；基本面来自 FMP key metrics 和年度财报；估值/EPS 取决于当前 FMP 套餐字段可用性。"
+    },
+    stocks
+  };
+
+  setCachedScreen(key, payload);
+  return { payload, cacheStatus: "MISS" };
+}
+
+export default async function handler(request, response) {
   try {
-    if (!shouldRefresh) {
-      const cached = getCachedScreen(key);
-      if (cached) {
-        response.setHeader("X-Investment-Radar-Cache", "HIT");
-        response.status(200).json(cached);
-        return;
-      }
-    }
-
-    let raw =
-      preset.id === "earnings_watch"
-        ? []
-        : await fmpGet("/company-screener", {
-            ...preset.fmpParams,
-            limit: rawLimit
-          });
-    if (preset.id === "earnings_watch") {
-      raw = await fmpGet("/company-screener", {
-        ...preset.fmpParams,
-        limit: rawLimit
-      });
-    }
-    const symbols = [...new Set(raw.map((row) => row.symbol).filter(Boolean))];
-    const quotes = await quoteSymbols(symbols);
-    const quoteMap = new Map(quotes.map((quote) => [quote.symbol, quote]));
-
-    let baseStocks = raw
-      .map((row) => normalizeStock(row, quoteMap.get(row.symbol)))
-      .filter((stock) => stock.symbol && stock.price && isCommonStock(rowFromStock(stock), stock));
-
-    if (preset.id === "earnings_watch") {
-      const earningsStocks = await loadEarningsWatch(limit);
-      if (earningsStocks.length) baseStocks = earningsStocks;
-    }
-
-    const prefilteredStocks = prefilterBeforeTechnical(preset.id, baseStocks);
-    baseStocks = await enrichStocksWithTechnical(
-      prefilteredStocks.length ? prefilteredStocks : baseStocks,
-      technicalLimitForPreset(preset.id),
-      8
-    );
-    if (preset.id === "quality_growth") {
-      baseStocks = await enrichStocksWithFundamentals(baseStocks, fundamentalLimitForScreen(limit), 6);
-    }
-
-    let filteredStocks = applyPresetFilter(preset.id, baseStocks);
-    if (preset.id === "unusual_volume" && !filteredStocks.length) {
-      filteredStocks = baseStocks.filter((stock) => (stock.marketCap ?? 0) < 300_000_000_000 && (stock.volume ?? 0) > 1_000_000);
-    }
-    if (!filteredStocks.length) filteredStocks = baseStocks;
-
-    const stocks = filteredStocks
-      .map((stock) => {
-        const strategy = strategyReasons(preset.id, stock);
-        return {
-          ...stock,
-          score: Math.max(0, Math.min(100, Math.round(strategyScore(preset.id, stock)))),
-          reasons: strategy.reasons,
-          risks: strategy.risks
-        };
-      })
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
-
-    const payload = {
-      preset,
-      generatedAt: new Date().toISOString(),
-      dataQuality: {
-        technicalReady: stocks.filter((stock) => stock.technicalReady).length,
-        fundamentalReady: stocks.filter((stock) => stock.fundamentalReady).length,
-        total: stocks.length,
-        cached: false,
-        cacheTtlSeconds: Math.round(SCREEN_CACHE_TTL_MS / 1000),
-        note: "技术指标来自 FMP 历史价格自行计算；基本面来自 FMP key metrics 和年度财报；估值/EPS 取决于当前 FMP 套餐字段可用性。"
-      },
-      stocks
-    };
-
-    setCachedScreen(key, payload);
-    response.setHeader("X-Investment-Radar-Cache", "MISS");
+    const { payload, cacheStatus } = await runScreen({
+      presetId: request.query.preset,
+      limit: request.query.limit,
+      refresh: request.query.refresh === "1"
+    });
+    response.setHeader("X-Investment-Radar-Cache", cacheStatus);
     response.status(200).json(payload);
   } catch (error) {
     response.status(error.statusCode || 500).json({ error: error.message || "Unknown error" });

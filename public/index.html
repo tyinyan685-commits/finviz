@@ -27,6 +27,10 @@
             <p class="muted">用同样思路在 Finviz 里人工复核图形、行业和新闻。</p>
             <a id="finviz-link" class="link-button" href="#" target="_blank" rel="noreferrer">打开 Finviz 筛选器</a>
           </div>
+          <div class="panel">
+            <h2>历史队列</h2>
+            <button id="load-history" class="ghost full">加载历史队列</button>
+          </div>
         </aside>
 
         <section class="content">
@@ -66,6 +70,31 @@
                   </tr>
                 </thead>
                 <tbody id="stock-table"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="history-panel" class="panel hidden">
+            <div class="section-head">
+              <div>
+                <h2>历史优先队列</h2>
+                <p id="history-meta" class="muted"></p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ticker</th>
+                    <th>行业</th>
+                    <th>命中雷达</th>
+                    <th>出现次数</th>
+                    <th>均分</th>
+                    <th>最近出现</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="history-table"></tbody>
               </table>
             </div>
           </div>

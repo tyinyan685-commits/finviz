@@ -131,6 +131,31 @@ function renderStocks(data) {
   });
 }
 
+function renderHistory(data) {
+  $("history-meta").textContent = `近 ${data.days} 天；原始记录 ${data.totalRows} 条；生成时间 ${new Date(data.generatedAt).toLocaleString()}`;
+  $("history-table").innerHTML = (data.candidates || [])
+    .map(
+      (stock) => `
+        <tr>
+          <td><strong>${stock.symbol}</strong><span>${stock.name || ""}</span></td>
+          <td>${stock.sector || "n/a"}<span>${stock.industry || ""}</span></td>
+          <td>${stock.presetCount}<span>${(stock.presetIds || []).join(", ")}</span></td>
+          <td>${stock.appearances}</td>
+          <td><div class="score"><span style="width:${stock.averageScore || 0}%"></span></div>${stock.averageScore ?? "n/a"}</td>
+          <td>${stock.latestDate || "n/a"}<span>${money(stock.latestMarketCap)}</span></td>
+          <td><button class="ghost" data-analyze="${stock.symbol}">分析</button></td>
+        </tr>
+      `
+    )
+    .join("");
+
+  document.querySelectorAll("#history-table [data-analyze]").forEach((button) => {
+    button.addEventListener("click", () => analyzeStock(button.dataset.analyze));
+  });
+  show("history-panel");
+  show("empty", false);
+}
+
 async function runScreen() {
   $("run-screen").textContent = "扫描中...";
   $("run-screen").disabled = true;
@@ -144,6 +169,21 @@ async function runScreen() {
   } finally {
     $("run-screen").textContent = "运行筛选";
     $("run-screen").disabled = false;
+  }
+}
+
+async function loadHistory() {
+  $("load-history").textContent = "加载中...";
+  $("load-history").disabled = true;
+  setError("");
+  try {
+    const data = await getJson("/api/history?days=30&limit=30");
+    renderHistory(data);
+  } catch (error) {
+    setError(error.message);
+  } finally {
+    $("load-history").textContent = "加载历史队列";
+    $("load-history").disabled = false;
   }
 }
 
@@ -210,6 +250,7 @@ async function init() {
 }
 
 $("run-screen").addEventListener("click", runScreen);
+$("load-history").addEventListener("click", loadHistory);
 $("copy-report").addEventListener("click", async () => {
   if (!reportText) return;
   await navigator.clipboard.writeText(reportText);
