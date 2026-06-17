@@ -3,6 +3,28 @@ let presetId = "momentum_breakout";
 let selectedSymbol = "";
 let reportText = "";
 const snapshotKey = "investment-radar-snapshot";
+const presetLogic = {
+  momentum_breakout: {
+    title: "强势突破逻辑",
+    text: "基础过滤：市值大于 20 亿美元、成交量充足、股价大于 10 美元。排序更重视 20 日涨幅、5 日延续、相对成交量、价格是否站上 50/200 日均线以及是否接近 52 周高点。"
+  },
+  quality_growth: {
+    title: "优质成长逻辑",
+    text: "基础过滤：大市值、高流动性、正 EPS 或估值不过度异常。排序额外读取年度财报和 key metrics，重视收入增长、净利润增长、经营利润率、自由现金流收益率、ROIC/ROE、EV/EBITDA 和债务水平。"
+  },
+  pullback_watch: {
+    title: "强股回调逻辑",
+    text: "基础过滤：中大型、高流动性股票。排序寻找长期趋势仍在 200 日均线上方、短期靠近或略低于 50 日均线、RSI 没有过热的标的，用来观察回调后的二次机会。"
+  },
+  unusual_volume: {
+    title: "异常放量逻辑",
+    text: "基础过滤：中小到中大型、成交量足够活跃的股票。排序重视相对成交量、短期涨跌幅和流动性；这个雷达只负责发现异常，后续必须用新闻和财报解释放量原因。"
+  },
+  earnings_watch: {
+    title: "财报观察逻辑",
+    text: "基础过滤：未来两周财报相关候选和流动性合格股票。排序更重视财报日期、近期波动和市值，用来安排研究和风险提醒，不直接代表方向判断。"
+  }
+};
 
 const $ = (id) => document.getElementById(id);
 
@@ -100,6 +122,14 @@ function renderSectorChips(stocks) {
     .join("");
 }
 
+function renderScreenLogic(preset) {
+  const logic = presetLogic[preset.id] || {
+    title: "筛选逻辑",
+    text: "先做基础股票池过滤，再结合价格、成交量、技术面和可用基本面计算研究优先级。"
+  };
+  $("screen-logic").innerHTML = `<strong>${logic.title}</strong><span>${logic.text}</span>`;
+}
+
 function renderStocks(data) {
   $("screen-title").textContent = data.preset.name;
   $("screen-time").textContent = `生成时间：${new Date(data.generatedAt).toLocaleString()}`;
@@ -111,6 +141,7 @@ function renderStocks(data) {
   $("finviz-link").href = data.preset.finvizUrl;
   show("finviz-panel");
   showMainView("screen");
+  renderScreenLogic(data.preset);
   renderCounts(data.stocks);
   renderSectorChips(data.stocks);
 

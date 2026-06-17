@@ -20,6 +20,7 @@
         <aside class="sidebar">
           <div class="panel">
             <h2>筛选雷达</h2>
+            <p class="muted panel-note">每个雷达先用 FMP 股票池做基础过滤，再补充价格、成交量、技术面；优质成长会额外读取基本面。</p>
             <div id="preset-list" class="preset-list"></div>
           </div>
           <div id="finviz-panel" class="panel hidden">
@@ -29,6 +30,7 @@
           </div>
           <div class="panel">
             <h2>历史队列</h2>
+            <p class="muted panel-note">来自 Supabase 每日快照，优先显示最新新增、多雷达重叠、反复出现且评分较高的股票。</p>
             <button id="load-history" class="ghost full">加载历史队列</button>
           </div>
         </aside>
@@ -52,6 +54,7 @@
               </div>
               <div id="sector-chips" class="chips"></div>
             </div>
+            <div id="screen-logic" class="logic-box"></div>
             <div class="table-wrap">
               <table>
                 <thead>
@@ -80,6 +83,10 @@
                 <h2>历史优先队列</h2>
                 <p id="history-meta" class="muted"></p>
               </div>
+            </div>
+            <div class="logic-box">
+              <strong>排序逻辑</strong>
+              <span>先看最新快照中的新增标的，再看最近命中的雷达数量，其次看过去 30 天出现次数和平均分。它不是买入清单，而是每天优先研究的候选池。</span>
             </div>
             <div class="table-wrap">
               <table>
