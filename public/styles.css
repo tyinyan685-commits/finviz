@@ -132,6 +132,20 @@ h3 { margin-top: 18px; font-size: 13px; }
 }
 .logic-box strong { font-size: 13px; }
 .logic-box span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.coverage-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdfa;
+}
+.coverage-box div { display: grid; gap: 4px; }
+.coverage-box strong { font-size: 13px; }
+.coverage-box span { color: var(--muted); font-size: 12px; line-height: 1.5; }
 .chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .chip {
   border-radius: 999px;
@@ -154,6 +168,10 @@ h3 { margin-top: 18px; font-size: 13px; }
 .green-badge {
   background: #e8f7ee;
   color: var(--green);
+}
+.warn-badge {
+  background: #fff2d8;
+  color: #9a5a00;
 }
 .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
 table { width: 100%; min-width: 980px; border-collapse: collapse; }

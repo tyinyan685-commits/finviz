@@ -130,6 +130,22 @@ function renderScreenLogic(preset) {
   $("screen-logic").innerHTML = `<strong>${logic.title}</strong><span>${logic.text}</span>`;
 }
 
+function renderHistoryCoverage(data) {
+  const latestPresetIds = new Set(data.runSummary?.latestPresetIds || []);
+  const missingPresets = presets.filter((preset) => !latestPresetIds.has(preset.id));
+  const total = presets.length || latestPresetIds.size;
+  const covered = latestPresetIds.size;
+  const complete = total > 0 && covered >= total;
+
+  $("history-coverage").innerHTML = `
+    <div>
+      <strong>快照覆盖 ${covered}/${total}</strong>
+      <span>${complete ? "最新快照已覆盖全部雷达。" : `暂缺：${missingPresets.map((preset) => preset.name).join("、") || "无"}`}</span>
+    </div>
+    <span class="badge ${complete ? "green-badge" : "warn-badge"}">${complete ? "完整" : "等待快照"}</span>
+  `;
+}
+
 function renderStocks(data) {
   $("screen-title").textContent = data.preset.name;
   $("screen-time").textContent = `生成时间：${new Date(data.generatedAt).toLocaleString()}`;
@@ -176,7 +192,10 @@ function renderHistory(data) {
   $("history-meta").textContent = `近 ${data.days} 天；原始记录 ${data.totalRows} 条；最新快照 ${
     data.runSummary?.latestRunDate || "n/a"
   }；覆盖雷达 ${latestPresets.length ? latestPresets.join(", ") : "n/a"}`;
-  $("history-table").innerHTML = (data.candidates || [])
+  renderHistoryCoverage(data);
+  const candidates = data.candidates || [];
+  $("history-table").innerHTML = candidates.length
+    ? candidates
     .map(
       (stock) => `
         <tr>
@@ -192,7 +211,8 @@ function renderHistory(data) {
         </tr>
       `
     )
-    .join("");
+    .join("")
+    : `<tr><td colspan="7"><strong>暂无历史候选</strong><span>先等待 Vercel Cron 运行，或手动触发 /api/snapshot 保存一次雷达快照。</span></td></tr>`;
 
   document.querySelectorAll("#history-table [data-analyze]").forEach((button) => {
     button.addEventListener("click", () => analyzeStock(button.dataset.analyze));
