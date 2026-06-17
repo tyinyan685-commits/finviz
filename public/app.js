@@ -94,7 +94,7 @@ function renderStocks(data) {
   $("screen-title").textContent = data.preset.name;
   $("screen-time").textContent = `生成时间：${new Date(data.generatedAt).toLocaleString()}`;
   $("data-quality").textContent = data.dataQuality
-    ? `技术面覆盖：${data.dataQuality.technicalReady}/${data.dataQuality.total}`
+    ? `技术面覆盖：${data.dataQuality.technicalReady}/${data.dataQuality.total}；基本面覆盖：${data.dataQuality.fundamentalReady || 0}/${data.dataQuality.total}`
     : "";
   $("finviz-link").href = data.preset.finvizUrl;
   show("finviz-panel");

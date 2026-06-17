@@ -3,16 +3,20 @@ import { loadTechnical } from "./_lib/technical.js";
 
 export default async function handler(_request, response) {
   try {
-    const [stableQuote, v3Quote, profile, technical] = await Promise.all([
+    const [stableQuote, v3Quote, profile, metrics, income, technical] = await Promise.all([
       optional(fmpGet("/quote", { symbol: "AAPL" }), null),
       optional(fmpV3Get("/quote/AAPL"), null),
       optional(fmpGet("/profile", { symbol: "AAPL" }), null),
+      optional(fmpGet("/key-metrics-ttm", { symbol: "AAPL" }), null),
+      optional(fmpGet("/income-statement", { symbol: "AAPL", period: "annual", limit: 2 }), null),
       optional(loadTechnical("AAPL"), null)
     ]);
 
     const stableFirst = Array.isArray(stableQuote) ? stableQuote[0] : null;
     const v3First = Array.isArray(v3Quote) ? v3Quote[0] : null;
     const profileFirst = Array.isArray(profile) ? profile[0] : null;
+    const metricsFirst = Array.isArray(metrics) ? metrics[0] : null;
+    const incomeFirst = Array.isArray(income) ? income[0] : null;
 
     response.status(200).json({
       ok: Boolean(profileFirst && technical?.latest),
@@ -29,6 +33,14 @@ export default async function handler(_request, response) {
         profile: {
           ok: Boolean(profileFirst),
           fields: profileFirst ? Object.keys(profileFirst).sort() : []
+        },
+        keyMetricsTtm: {
+          ok: Boolean(metricsFirst),
+          fields: metricsFirst ? Object.keys(metricsFirst).sort() : []
+        },
+        annualIncome: {
+          ok: Boolean(incomeFirst),
+          fields: incomeFirst ? Object.keys(incomeFirst).sort() : []
         },
         historicalTechnical: {
           ok: Boolean(technical?.latest),

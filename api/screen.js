@@ -1,4 +1,5 @@
 import { fmpGet, fmpV3Get, optional, safeNumber } from "./_lib/fmp.js";
+import { enrichStocksWithFundamentals } from "./_lib/fundamentals.js";
 import { getPreset } from "./_lib/presets.js";
 import { scoreStock } from "./_lib/scoring.js";
 import { enrichStocksWithTechnical } from "./_lib/technical.js";
@@ -86,10 +87,15 @@ function strategyScore(presetId, stock) {
 
   if (presetId === "quality_growth") {
     return (
-      45 +
-      (stock.eps && stock.eps > 0 ? 18 : -12) +
-      (stock.pe && stock.pe > 8 && stock.pe < 45 ? 16 : 0) +
-      (stock.pe && stock.pe >= 45 && stock.pe < 80 ? 4 : 0) +
+      38 +
+      Math.min(16, Math.max(0, stock.revenueGrowth ?? 0) * 120) +
+      Math.min(14, Math.max(0, stock.netIncomeGrowth ?? 0) * 80) +
+      Math.min(12, Math.max(0, stock.operatingMargin ?? 0) * 35) +
+      Math.min(10, Math.max(0, stock.freeCashFlowYield ?? 0) * 300) +
+      Math.min(10, Math.max(0, stock.returnOnInvestedCapital ?? stock.returnOnEquity ?? 0) * 20) +
+      (stock.eps && stock.eps > 0 ? 6 : 0) +
+      (stock.evToEbitda && stock.evToEbitda > 0 && stock.evToEbitda < 30 ? 6 : 0) +
+      (stock.debtToEquity && stock.debtToEquity > 2 ? -8 : 0) +
       ((stock.distance200 ?? 0) > 0 ? 8 : 0) +
       marketCapBonus
     );
@@ -137,12 +143,21 @@ function strategyReasons(presetId, stock) {
   if (stock.distance200 !== null && stock.distance200 > 0) reasons.push("价格在200日均线上方");
   if (stock.distanceFromHigh52Week !== null && stock.distanceFromHigh52Week > -8) reasons.push("接近52周高点");
   if (stock.eps && stock.eps > 0) reasons.push("EPS 为正");
+  if (stock.revenueGrowth !== null && stock.revenueGrowth > 0.08) reasons.push(`收入增长 ${(stock.revenueGrowth * 100).toFixed(1)}%`);
+  if (stock.operatingMargin !== null && stock.operatingMargin > 0.15) reasons.push(`经营利润率 ${(stock.operatingMargin * 100).toFixed(1)}%`);
+  if (stock.freeCashFlowYield !== null && stock.freeCashFlowYield > 0.03) reasons.push(`自由现金流收益率 ${(stock.freeCashFlowYield * 100).toFixed(1)}%`);
+  if (stock.returnOnInvestedCapital !== null && stock.returnOnInvestedCapital > 0.12) {
+    reasons.push(`ROIC ${(stock.returnOnInvestedCapital * 100).toFixed(1)}%`);
+  }
   if (stock.pe && stock.pe > 0 && stock.pe < 45) reasons.push("PE 未明显极端");
   if (stock.earningsDate) reasons.push(`财报日 ${String(stock.earningsDate).slice(0, 10)}`);
 
   if (presetId === "pullback_watch" && stock.distance50 !== null && stock.distance50 < 0) reasons.push("短期回到50日线下方，适合观察而非追高");
   if (presetId === "unusual_volume" && (!stock.relativeVolume || stock.relativeVolume < 1.2)) risks.push("平均成交量数据不足，放量信号需要人工复核");
   if (stock.pe && stock.pe > 80) risks.push("估值偏高，容错率较低");
+  if (stock.revenueGrowth !== null && stock.revenueGrowth < 0) risks.push("收入同比下滑");
+  if (stock.freeCashFlow !== null && stock.freeCashFlow < 0) risks.push("自由现金流为负");
+  if (stock.debtToEquity !== null && stock.debtToEquity > 2) risks.push("债务/权益偏高");
   if (stock.changesPercentage && stock.changesPercentage > 8) risks.push("短线涨幅较大，追高风险增加");
   if (stock.marketCap && stock.marketCap < 1_000_000_000) risks.push("市值较小，波动和流动性风险更高");
 
@@ -301,6 +316,9 @@ export default async function handler(request, response) {
       technicalLimitForPreset(preset.id),
       8
     );
+    if (preset.id === "quality_growth") {
+      baseStocks = await enrichStocksWithFundamentals(baseStocks, 40, 6);
+    }
 
     let filteredStocks = applyPresetFilter(preset.id, baseStocks);
     if (preset.id === "unusual_volume" && !filteredStocks.length) {
@@ -326,6 +344,7 @@ export default async function handler(request, response) {
       generatedAt: new Date().toISOString(),
       dataQuality: {
         technicalReady: stocks.filter((stock) => stock.technicalReady).length,
+        fundamentalReady: stocks.filter((stock) => stock.fundamentalReady).length,
         total: stocks.length,
         note: "技术指标来自 FMP 历史价格自行计算；估值/EPS 取决于当前 FMP 套餐的 quote/key metrics 字段可用性。"
       },
