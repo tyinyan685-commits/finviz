@@ -35,6 +35,7 @@ export async function loadFundamentals(symbol, marketCap = null) {
   const priorIncome = incomeData[1] || {};
   const latestBalance = balanceData[0] || {};
   const latestCashFlow = cashFlowData[0] || {};
+  const financialCurrency = latestIncome.reportedCurrency ?? latestCashFlow.reportedCurrency ?? null;
 
   const revenue = safeNumber(latestIncome.revenue);
   const priorRevenue = safeNumber(priorIncome.revenue);
@@ -55,7 +56,8 @@ export async function loadFundamentals(symbol, marketCap = null) {
     grossMargin: ratio(grossProfit, revenue),
     operatingMargin: ratio(operatingIncome, revenue),
     freeCashFlow,
-    freeCashFlowYield: ratio(freeCashFlow, cap),
+    freeCashFlowYield: financialCurrency === "USD" ? ratio(freeCashFlow, cap) : null,
+    financialCurrency,
     totalDebt,
     debtToEquity: ratio(totalDebt, totalEquity),
     returnOnEquity: safeNumber(metrics.returnOnEquityTTM),
