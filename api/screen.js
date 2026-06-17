@@ -87,16 +87,20 @@ function strategyScore(presetId, stock) {
 
   if (presetId === "quality_growth") {
     return (
-      38 +
-      Math.min(16, Math.max(0, stock.revenueGrowth ?? 0) * 120) +
-      Math.min(14, Math.max(0, stock.netIncomeGrowth ?? 0) * 80) +
-      Math.min(12, Math.max(0, stock.operatingMargin ?? 0) * 35) +
-      Math.min(10, Math.max(0, stock.freeCashFlowYield ?? 0) * 300) +
-      Math.min(10, Math.max(0, stock.returnOnInvestedCapital ?? stock.returnOnEquity ?? 0) * 20) +
+      24 +
+      Math.min(14, Math.max(0, stock.revenueGrowth ?? 0) * 50) +
+      Math.min(12, Math.max(0, stock.netIncomeGrowth ?? 0) * 35) +
+      Math.min(12, Math.max(0, stock.operatingMargin ?? 0) * 25) +
+      Math.min(10, Math.max(0, stock.freeCashFlowYield ?? 0) * 250) +
+      Math.min(12, Math.max(0, stock.returnOnInvestedCapital ?? stock.returnOnEquity ?? 0) * 30) +
+      Math.min(6, Math.max(0, stock.earningsYield ?? 0) * 120) +
       (stock.eps && stock.eps > 0 ? 6 : 0) +
-      (stock.evToEbitda && stock.evToEbitda > 0 && stock.evToEbitda < 30 ? 6 : 0) +
+      (stock.evToEbitda && stock.evToEbitda > 0 && stock.evToEbitda < 18 ? 6 : 0) +
+      (stock.evToEbitda && stock.evToEbitda >= 18 && stock.evToEbitda < 30 ? 3 : 0) +
+      (stock.debtToEquity !== null && stock.debtToEquity < 0.5 ? 4 : 0) +
       (stock.debtToEquity && stock.debtToEquity > 2 ? -8 : 0) +
-      ((stock.distance200 ?? 0) > 0 ? 8 : 0) +
+      ((stock.distance200 ?? 0) > 0 ? 6 : -4) +
+      ((stock.distance50 ?? 0) > 0 ? 3 : 0) +
       marketCapBonus
     );
   }
