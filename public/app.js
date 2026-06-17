@@ -110,6 +110,8 @@ function renderStocks(data) {
           <td>${stock.sector || "n/a"}<span>${stock.industry || ""}</span></td>
           <td>${Number.isFinite(stock.price) ? stock.price.toFixed(2) : "n/a"}</td>
           <td class="${Number(stock.changesPercentage) >= 0 ? "green" : "red"}">${pct(stock.changesPercentage)}</td>
+          <td class="${Number(stock.change20d) >= 0 ? "green" : "red"}">${pct(stock.change20d)}</td>
+          <td>${Number.isFinite(stock.relativeVolume) ? `${stock.relativeVolume.toFixed(1)}x` : "n/a"}</td>
           <td>${money(stock.marketCap)}</td>
           <td>${Number.isFinite(stock.pe) ? stock.pe.toFixed(1) : "n/a"}</td>
           <td><div class="score"><span style="width:${stock.score}%"></span></div>${stock.score}</td>

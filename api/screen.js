@@ -1,6 +1,7 @@
 import { fmpGet, fmpV3Get, optional, safeNumber } from "./_lib/fmp.js";
 import { getPreset } from "./_lib/presets.js";
 import { scoreStock } from "./_lib/scoring.js";
+import { enrichStocksWithTechnical } from "./_lib/technical.js";
 
 const ETFS_AND_FUNDS = /\b(etf|fund|trust|index|proshares|ishares|vanguard|spdr|invesco|direxion|ark |yieldmax)\b/i;
 
@@ -69,9 +70,11 @@ function strategyScore(presetId, stock) {
   if (presetId === "momentum_breakout") {
     return (
       45 +
-      Math.min(25, Math.max(0, change) * 3) +
+      Math.min(25, Math.max(0, stock.change20d ?? change) * 1.3) +
+      Math.min(10, Math.max(0, stock.change5d ?? 0) * 2) +
       Math.min(18, Math.max(0, relVol - 1) * 8) +
       volumeBonus +
+      ((stock.distanceFromHigh52Week ?? -100) > -8 ? 10 : 0) +
       ((stock.distance50 ?? 0) > 0 ? 8 : -8) +
       ((stock.distance200 ?? 0) > 0 ? 8 : -8) +
       marketCapBonus
@@ -90,10 +93,12 @@ function strategyScore(presetId, stock) {
   }
 
   if (presetId === "pullback_watch") {
+    const pullbackSweetSpot = stock.distance50 !== null && stock.distance50 > -8 && stock.distance50 < 3 ? 18 : 0;
     return (
       55 +
       ((stock.distance200 ?? -999) > 0 ? 15 : -18) +
-      ((stock.distance50 ?? 999) < 0 ? 14 : 0) +
+      pullbackSweetSpot +
+      (stock.rsi14 && stock.rsi14 < 55 ? 8 : 0) +
       (change < 0 ? 10 : 0) -
       Math.max(0, change) * 2 +
       marketCapBonus
@@ -106,6 +111,7 @@ function strategyScore(presetId, stock) {
       Math.min(35, Math.max(0, relVol - 1) * 18) +
       volumeBonus +
       Math.min(16, Math.abs(change) * 2) +
+      Math.min(10, Math.abs(stock.change5d ?? 0) * 1.5) +
       (stock.volume && stock.volume > 2_000_000 ? 8 : 0) +
       marketCapBonus
     );
@@ -123,8 +129,10 @@ function strategyReasons(presetId, stock) {
   const risks = [];
   if (stock.relativeVolume && stock.relativeVolume > 1.3) reasons.push(`相对成交量 ${stock.relativeVolume.toFixed(1)}x`);
   if (stock.changesPercentage && stock.changesPercentage > 2) reasons.push(`当日涨幅 ${stock.changesPercentage.toFixed(1)}%`);
+  if (stock.change20d && stock.change20d > 8) reasons.push(`20日涨幅 ${stock.change20d.toFixed(1)}%`);
   if (stock.distance50 !== null && stock.distance50 > 0) reasons.push("价格在50日均线上方");
   if (stock.distance200 !== null && stock.distance200 > 0) reasons.push("价格在200日均线上方");
+  if (stock.distanceFromHigh52Week !== null && stock.distanceFromHigh52Week > -8) reasons.push("接近52周高点");
   if (stock.eps && stock.eps > 0) reasons.push("EPS 为正");
   if (stock.pe && stock.pe > 0 && stock.pe < 45) reasons.push("PE 未明显极端");
   if (stock.earningsDate) reasons.push(`财报日 ${String(stock.earningsDate).slice(0, 10)}`);
@@ -148,8 +156,9 @@ function applyPresetFilter(presetId, stocks) {
         (stock.marketCap ?? 0) < 500_000_000_000 &&
         (stock.volume ?? 0) > 500_000 &&
         (stock.price ?? 0) > 10 &&
-        (stock.changesPercentage === null || stock.changesPercentage > 0) &&
-        (stock.distance50 === null || stock.distance50 > 0)
+        (stock.change20d === null || stock.change20d > 0) &&
+        (stock.distance50 === null || stock.distance50 > 0) &&
+        (stock.distance200 === null || stock.distance200 > 0)
     );
   }
   if (presetId === "quality_growth") {
@@ -166,7 +175,8 @@ function applyPresetFilter(presetId, stocks) {
         (stock.marketCap ?? 0) < 800_000_000_000 &&
         (stock.marketCap ?? 0) > 10_000_000_000 &&
         (stock.distance200 === null || stock.distance200 > 0) &&
-        (stock.changesPercentage === null || stock.changesPercentage < 2)
+        (stock.distance50 === null || (stock.distance50 > -12 && stock.distance50 < 5)) &&
+        (stock.rsi14 === null || stock.rsi14 < 65)
     );
   }
   if (presetId === "unusual_volume") {
@@ -174,7 +184,7 @@ function applyPresetFilter(presetId, stocks) {
       (stock) =>
         (stock.marketCap ?? 0) < 50_000_000_000 &&
         (stock.volume ?? 0) > 1_000_000 &&
-        (stock.relativeVolume === null || stock.relativeVolume > 1.1 || Math.abs(stock.changesPercentage ?? 0) > 4)
+        (stock.relativeVolume === null || stock.relativeVolume > 1.15 || Math.abs(stock.change5d ?? stock.changesPercentage ?? 0) > 4)
     );
   }
   if (presetId === "earnings_watch") {
@@ -249,6 +259,8 @@ export default async function handler(request, response) {
       const earningsStocks = await loadEarningsWatch(limit);
       if (earningsStocks.length) baseStocks = earningsStocks;
     }
+
+    baseStocks = await enrichStocksWithTechnical(baseStocks, preset.id === "quality_growth" ? 35 : 60, 8);
 
     let filteredStocks = applyPresetFilter(preset.id, baseStocks);
     if (preset.id === "unusual_volume" && !filteredStocks.length) {

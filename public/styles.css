@@ -129,7 +129,7 @@ h3 { margin-top: 18px; font-size: 13px; }
   white-space: nowrap;
 }
 .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
-table { width: 100%; min-width: 880px; border-collapse: collapse; }
+table { width: 100%; min-width: 980px; border-collapse: collapse; }
 th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
 th { position: sticky; top: 0; background: #f9fbfd; color: var(--muted); font-size: 12px; font-weight: 800; }
 td span {
