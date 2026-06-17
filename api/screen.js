@@ -193,6 +193,38 @@ function applyPresetFilter(presetId, stocks) {
   return stocks;
 }
 
+function prefilterBeforeTechnical(presetId, stocks) {
+  if (presetId === "momentum_breakout") {
+    return stocks.filter(
+      (stock) => (stock.marketCap ?? 0) < 500_000_000_000 && (stock.volume ?? 0) > 500_000 && (stock.price ?? 0) > 10
+    );
+  }
+  if (presetId === "quality_growth") {
+    return stocks.filter((stock) => (stock.marketCap ?? 0) > 10_000_000_000 && (stock.volume ?? 0) > 300_000);
+  }
+  if (presetId === "pullback_watch") {
+    return stocks.filter(
+      (stock) =>
+        (stock.marketCap ?? 0) < 800_000_000_000 &&
+        (stock.marketCap ?? 0) > 10_000_000_000 &&
+        (stock.volume ?? 0) > 800_000
+    );
+  }
+  if (presetId === "unusual_volume") {
+    return stocks.filter((stock) => (stock.marketCap ?? 0) < 300_000_000_000 && (stock.volume ?? 0) > 1_000_000);
+  }
+  if (presetId === "earnings_watch") {
+    return stocks.filter((stock) => (stock.marketCap ?? 0) < 300_000_000_000);
+  }
+  return stocks;
+}
+
+function technicalLimitForPreset(presetId) {
+  if (presetId === "quality_growth") return 40;
+  if (presetId === "unusual_volume") return 90;
+  return 70;
+}
+
 async function quoteSymbols(symbols) {
   if (!symbols.length) return [];
   const chunks = [];
@@ -260,7 +292,12 @@ export default async function handler(request, response) {
       if (earningsStocks.length) baseStocks = earningsStocks;
     }
 
-    baseStocks = await enrichStocksWithTechnical(baseStocks, preset.id === "quality_growth" ? 35 : 60, 8);
+    const prefilteredStocks = prefilterBeforeTechnical(preset.id, baseStocks);
+    baseStocks = await enrichStocksWithTechnical(
+      prefilteredStocks.length ? prefilteredStocks : baseStocks,
+      technicalLimitForPreset(preset.id),
+      8
+    );
 
     let filteredStocks = applyPresetFilter(preset.id, baseStocks);
     if (preset.id === "unusual_volume" && !filteredStocks.length) {
@@ -281,7 +318,16 @@ export default async function handler(request, response) {
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
 
-    response.status(200).json({ preset, generatedAt: new Date().toISOString(), stocks });
+    response.status(200).json({
+      preset,
+      generatedAt: new Date().toISOString(),
+      dataQuality: {
+        technicalReady: stocks.filter((stock) => stock.technicalReady).length,
+        total: stocks.length,
+        note: "技术指标来自 FMP 历史价格自行计算；估值/EPS 取决于当前 FMP 套餐的 quote/key metrics 字段可用性。"
+      },
+      stocks
+    });
   } catch (error) {
     response.status(error.statusCode || 500).json({ error: error.message || "Unknown error" });
   }
