@@ -129,6 +129,20 @@ h3 { margin-top: 18px; font-size: 13px; }
   font-size: 12px;
   white-space: nowrap;
 }
+.badge {
+  display: inline-block;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: var(--panel-2);
+  color: #405164;
+  font-size: 12px;
+  font-weight: 800;
+}
+.green-badge {
+  background: #e8f7ee;
+  color: var(--green);
+}
 .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
 table { width: 100%; min-width: 980px; border-collapse: collapse; }
 th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }

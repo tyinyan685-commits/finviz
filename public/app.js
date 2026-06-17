@@ -132,15 +132,20 @@ function renderStocks(data) {
 }
 
 function renderHistory(data) {
-  $("history-meta").textContent = `近 ${data.days} 天；原始记录 ${data.totalRows} 条；生成时间 ${new Date(data.generatedAt).toLocaleString()}`;
+  const latestPresets = data.runSummary?.latestPresetIds || [];
+  $("history-meta").textContent = `近 ${data.days} 天；原始记录 ${data.totalRows} 条；最新快照 ${
+    data.runSummary?.latestRunDate || "n/a"
+  }；覆盖雷达 ${latestPresets.length ? latestPresets.join(", ") : "n/a"}`;
   $("history-table").innerHTML = (data.candidates || [])
     .map(
       (stock) => `
         <tr>
           <td><strong>${stock.symbol}</strong><span>${stock.name || ""}</span></td>
           <td>${stock.sector || "n/a"}<span>${stock.industry || ""}</span></td>
-          <td>${stock.presetCount}<span>${(stock.presetIds || []).join(", ")}</span></td>
-          <td>${stock.appearances}</td>
+          <td>${stock.isNew ? '<span class="badge green-badge">新增</span>' : '<span class="badge">跟踪</span>'}<span>${
+            stock.latestPresetCount || stock.presetCount
+          } 个雷达：${(stock.latestPresetIds || stock.presetIds || []).join(", ")}</span></td>
+          <td>${stock.seenDays || 1} 天<span>${stock.appearances} 条记录；首次 ${stock.firstDate || "n/a"}</span></td>
           <td><div class="score"><span style="width:${stock.averageScore || 0}%"></span></div>${stock.averageScore ?? "n/a"}</td>
           <td>${stock.latestDate || "n/a"}<span>${money(stock.latestMarketCap)}</span></td>
           <td><button class="ghost" data-analyze="${stock.symbol}">分析</button></td>
