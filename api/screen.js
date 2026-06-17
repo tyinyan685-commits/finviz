@@ -69,14 +69,14 @@ function strategyScore(presetId, stock) {
 
   if (presetId === "momentum_breakout") {
     return (
-      45 +
-      Math.min(25, Math.max(0, stock.change20d ?? change) * 1.3) +
-      Math.min(10, Math.max(0, stock.change5d ?? 0) * 2) +
-      Math.min(18, Math.max(0, relVol - 1) * 8) +
-      volumeBonus +
-      ((stock.distanceFromHigh52Week ?? -100) > -8 ? 10 : 0) +
-      ((stock.distance50 ?? 0) > 0 ? 8 : -8) +
-      ((stock.distance200 ?? 0) > 0 ? 8 : -8) +
+      35 +
+      Math.min(22, Math.max(0, stock.change20d ?? change) * 0.7) +
+      Math.min(8, Math.max(0, stock.change5d ?? 0) * 0.8) +
+      Math.min(14, Math.max(0, relVol - 1) * 7) +
+      Math.min(8, volumeBonus) +
+      ((stock.distanceFromHigh52Week ?? -100) > -8 ? 8 : 0) +
+      ((stock.distance50 ?? 0) > 0 ? 7 : -7) +
+      ((stock.distance200 ?? 0) > 0 ? 7 : -7) +
       marketCapBonus
     );
   }
@@ -109,7 +109,7 @@ function strategyScore(presetId, stock) {
     return (
       38 +
       Math.min(35, Math.max(0, relVol - 1) * 18) +
-      volumeBonus +
+      Math.min(8, volumeBonus) +
       Math.min(16, Math.abs(change) * 2) +
       Math.min(10, Math.abs(stock.change5d ?? 0) * 1.5) +
       (stock.volume && stock.volume > 2_000_000 ? 8 : 0) +
