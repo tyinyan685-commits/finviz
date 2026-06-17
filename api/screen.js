@@ -3,7 +3,9 @@ import { getPreset } from "./_lib/presets.js";
 import { scoreStock } from "./_lib/scoring.js";
 import { enrichStocksWithTechnical } from "./_lib/technical.js";
 
-const ETFS_AND_FUNDS = /\b(etf|fund|trust|index|proshares|ishares|vanguard|spdr|invesco|direxion|ark |yieldmax)\b/i;
+const NON_COMMON_STOCK_TERMS =
+  /\b(etf|fund|trust|index|proshares|ishares|vanguard|spdr|invesco|direxion|yieldmax|warrant|rights|units|preferred|notes due|etn|bond)\b/i;
+const NON_COMMON_SYMBOL_SUFFIX = /(\.W|\.WS|\.WT|\.U|-WS|-WT|-U)$/i;
 
 function today(offsetDays = 0) {
   return new Date(Date.now() + offsetDays * 86400000).toISOString().slice(0, 10);
@@ -21,7 +23,8 @@ function pctValue(value) {
 
 function isCommonStock(row, quote) {
   const name = `${quote.name ?? row.companyName ?? ""} ${row.industry ?? ""}`;
-  return !ETFS_AND_FUNDS.test(name);
+  const symbol = String(row.symbol ?? quote.symbol ?? "");
+  return !NON_COMMON_STOCK_TERMS.test(name) && !NON_COMMON_SYMBOL_SUFFIX.test(symbol);
 }
 
 function normalizeStock(row, quote = {}) {

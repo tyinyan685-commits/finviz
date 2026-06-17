@@ -45,6 +45,15 @@ FMP_API_KEY=你的_FMP_API_KEY
 - `GET /api/analyze?symbol=AAPL`：获取公司、财务、估值和新闻摘要。
 - `GET /api/technical?symbol=AAPL`：生成均线、RSI 和技术面信号。
 - `GET /api/report?symbol=AAPL`：生成 Markdown 研究备忘录。
+- `GET /api/health`：检查 FMP key 对 quote/profile/historical price 的字段可用性。
+
+## 数据逻辑
+
+- 基础股票池来自 FMP `company-screener`。
+- 技术指标来自 FMP historical price，自行计算 20/50/200 日均线、1/5/20/60 日涨跌幅、20 日平均成交量、相对成交量、RSI 和距离 52 周高点。
+- Finviz 目前作为人工复核入口，不作为自动数据源。
+- 系统会过滤明显的 ETF、基金、权证、单位类、优先股、债券/票据类标的；仍建议对异常名称或价格做人工复核。
+- 估值、EPS、PE 等字段取决于当前 FMP 套餐和 endpoint 权限，字段缺失时雷达会降级为价格/成交量/技术面优先。
 
 ## 下一阶段建议
 
