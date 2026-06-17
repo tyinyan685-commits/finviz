@@ -10,6 +10,16 @@ function show(id, visible = true) {
   $(id).classList.toggle("hidden", !visible);
 }
 
+function showMainView(view) {
+  show("screen-panel", view === "screen");
+  show("history-panel", view === "history");
+  show("empty", false);
+  show("details", false);
+  show("research", false);
+  const target = view === "history" ? $("history-panel") : $("screen-panel");
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function setError(message) {
   $("error").textContent = message || "";
   show("error", Boolean(message));
@@ -100,8 +110,7 @@ function renderStocks(data) {
     : "";
   $("finviz-link").href = data.preset.finvizUrl;
   show("finviz-panel");
-  show("screen-panel");
-  show("empty", false);
+  showMainView("screen");
   renderCounts(data.stocks);
   renderSectorChips(data.stocks);
 
@@ -157,8 +166,7 @@ function renderHistory(data) {
   document.querySelectorAll("#history-table [data-analyze]").forEach((button) => {
     button.addEventListener("click", () => analyzeStock(button.dataset.analyze));
   });
-  show("history-panel");
-  show("empty", false);
+  showMainView("history");
 }
 
 async function runScreen() {
