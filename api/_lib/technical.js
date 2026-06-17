@@ -39,7 +39,11 @@ export async function loadPrices(symbol, days = 370) {
 
 export function calculateTechnical(prices) {
   const rows = prices
-    .filter((row) => row.close)
+    .map((row) => ({
+      ...row,
+      close: safeNumber(row.close ?? row.price ?? row.adjClose)
+    }))
+    .filter((row) => row.close !== null)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const closes = rows.map((row) => Number(row.close));
   const volumes = rows.map((row) => safeNumber(row.volume)).filter((value) => value !== null);
