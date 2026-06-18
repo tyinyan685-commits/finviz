@@ -53,9 +53,54 @@ function renderList(id, items) {
   setHtml(id, (items || []).map((item) => `<li>${item}</li>`).join(""));
 }
 
+function businessLines(description) {
+  const text = String(description || "").toLowerCase();
+  const matches = [
+    ["smartphone", "智能手机"],
+    ["iphone", "智能手机"],
+    ["personal computer", "个人电脑"],
+    ["mac", "个人电脑"],
+    ["tablet", "平板电脑"],
+    ["ipad", "平板电脑"],
+    ["wearable", "可穿戴设备"],
+    ["watch", "可穿戴设备"],
+    ["accessories", "配件"],
+    ["cloud", "云服务"],
+    ["software", "软件"],
+    ["subscription", "订阅服务"],
+    ["advertising", "广告业务"],
+    ["payment", "支付/金融服务"],
+    ["semiconductor", "半导体"],
+    ["chip", "芯片"],
+    ["data center", "数据中心"],
+    ["artificial intelligence", "人工智能"],
+    ["e-commerce", "电商"],
+    ["retail", "零售"],
+    ["pharmaceutical", "医药"],
+    ["biotechnology", "生物科技"],
+    ["bank", "银行金融"],
+    ["insurance", "保险"],
+    ["energy", "能源"],
+    ["oil", "油气"],
+    ["restaurant", "餐饮"],
+    ["streaming", "流媒体"],
+    ["game", "游戏"]
+  ];
+  return [...new Set(matches.filter(([keyword]) => text.includes(keyword)).map(([, label]) => label))].slice(0, 6);
+}
+
+function trendText(value, positiveText, negativeText, flatText = "基本持平") {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "数据暂缺";
+  if (number > 0.05) return positiveText;
+  if (number < -0.05) return negativeText;
+  return flatText;
+}
+
 function companySummaryCn(analysis) {
   const profile = analysis.profile || {};
   const quote = analysis.quote || {};
+  const financials = analysis.financials || {};
   const name = profile.companyName || quote.name || analysis.symbol || "该公司";
   const sector = profile.sector || "未分类板块";
   const industry = profile.industry || "未分类行业";
@@ -63,10 +108,25 @@ function companySummaryCn(analysis) {
   const exchange = profile.exchange || quote.exchange || "未知交易所";
   const employees = Number(profile.fullTimeEmployees);
   const employeeText = Number.isFinite(employees) ? `，约有 ${employees.toLocaleString()} 名员工` : "";
-  const ipoText = profile.ipoDate ? `，上市日期为 ${profile.ipoDate}` : "";
-  const websiteText = profile.website ? `。官网：${profile.website}` : "。";
+  const lines = businessLines(profile.description);
+  const lineText = lines.length ? `，简介中提到的业务包括${lines.join("、")}` : "";
+  const revenueTrend = trendText(financials.revenueGrowth, "收入保持增长", "收入出现下滑");
+  const incomeTrend = trendText(financials.netIncomeGrowth, "净利润改善", "净利润承压");
+  const grossMargin = Number(financials.grossMargin);
+  const operatingMargin = Number(financials.operatingMargin);
+  const marginText =
+    Number.isFinite(grossMargin) && Number.isFinite(operatingMargin)
+      ? `毛利率约 ${ratioPct(grossMargin)}，经营利润率约 ${ratioPct(operatingMargin)}`
+      : "利润率数据暂缺";
+  const fcfText = Number.isFinite(Number(financials.freeCashFlow))
+    ? `自由现金流约 ${money(financials.freeCashFlow)}`
+    : "自由现金流数据暂缺";
+  const debtText = Number.isFinite(Number(financials.debtToEquity))
+    ? `债务/权益约 ${Number(financials.debtToEquity).toFixed(2)}`
+    : "杠杆数据暂缺";
+  const scoreText = analysis.score?.score ? `当前研究优先级为 ${analysis.score.score}/100` : "当前研究优先级暂缺";
 
-  return `${name} 属于 ${sector} 板块、${industry} 行业，主要上市地为 ${exchange}，注册/运营地区为 ${country}${employeeText}${ipoText}${websiteText}`;
+  return `主营业务：${name} 属于 ${sector} 板块、${industry} 行业，主要上市地为 ${exchange}，注册/运营地区为 ${country}${employeeText}${lineText}。经营状况：最近年度表现显示，${revenueTrend}，${incomeTrend}；${marginText}，${fcfText}，${debtText}；${scoreText}。`;
 }
 
 function symbolFromUrl() {
