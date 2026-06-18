@@ -54,8 +54,8 @@ function deepResearchUrl(symbol) {
 function actionButtons(symbol) {
   return `
     <div class="action-group">
-      <a class="action-link primary-action" href="${deepResearchUrl(symbol)}" target="_blank" rel="noreferrer" title="打开深度工具，并把当前股票代码传过去">深度研判</a>
       <a class="action-link secondary-action" href="${summaryUrl(symbol)}" target="_blank" rel="noreferrer" title="查看雷达生成的公司、财务、技术面、新闻和 Markdown 摘要">快速摘要</a>
+      <a class="action-link primary-action" href="${deepResearchUrl(symbol)}" target="_blank" rel="noreferrer" title="打开深度工具，并把当前股票代码传过去">深度研判</a>
     </div>
   `;
 }
