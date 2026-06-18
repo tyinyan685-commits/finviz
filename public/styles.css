@@ -87,7 +87,9 @@ h3 { margin-top: 18px; font-size: 13px; }
   font-weight: 700;
 }
 .ghost { padding: 7px 10px; background: #fff; color: var(--text); }
-.action-link { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.action-link { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; white-space: nowrap; }
+.action-group { display: flex; flex-wrap: wrap; gap: 6px; min-width: 156px; }
+.secondary-action { color: var(--accent); }
 .full { width: 100%; margin-top: 12px; }
 .ghost:hover, .preset:hover, .link-button:hover { border-color: var(--accent); }
 .link-button {

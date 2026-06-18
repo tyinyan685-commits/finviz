@@ -2,6 +2,7 @@ let presets = [];
 let presetId = "momentum_breakout";
 let selectedSymbol = "";
 const snapshotKey = "investment-radar-snapshot";
+const deepResearchBaseUrl = "https://invest-tan-three.vercel.app/";
 const presetLogic = {
   momentum_breakout: {
     title: "强势突破逻辑",
@@ -40,6 +41,23 @@ function setText(id, value) {
 function setHtml(id, value) {
   const element = $(id);
   if (element) element.innerHTML = value;
+}
+
+function summaryUrl(symbol) {
+  return `/stock.html?symbol=${encodeURIComponent(symbol)}`;
+}
+
+function deepResearchUrl(symbol) {
+  return `${deepResearchBaseUrl}?symbol=${encodeURIComponent(symbol)}`;
+}
+
+function actionButtons(symbol) {
+  return `
+    <div class="action-group">
+      <a class="ghost action-link" href="${deepResearchUrl(symbol)}" target="_blank" rel="noreferrer" title="打开深度工具，并把当前股票代码传过去">深度研判</a>
+      <a class="ghost action-link secondary-action" href="${summaryUrl(symbol)}" target="_blank" rel="noreferrer" title="查看雷达生成的公司、财务、技术面、新闻和 Markdown 摘要">快速摘要</a>
+    </div>
+  `;
 }
 
 function showMainView(view) {
@@ -183,7 +201,7 @@ function renderStocks(data) {
           <td>${Number.isFinite(stock.relativeVolume) ? `${stock.relativeVolume.toFixed(1)}x` : "n/a"}</td>
           <td>${money(stock.marketCap)}</td>
           <td><div class="score"><span style="width:${stock.score}%"></span></div>${stock.score}</td>
-          <td><a class="ghost action-link" href="/stock.html?symbol=${encodeURIComponent(stock.symbol)}" target="_blank" rel="noreferrer" title="打开公司、财务、技术面、新闻和 Markdown 报告">分析</a></td>
+          <td>${actionButtons(stock.symbol)}</td>
         </tr>
       `
     )
@@ -210,7 +228,7 @@ function renderHistory(data) {
           <td>${stock.seenDays || 1} 天<span>${stock.appearances} 条记录；首次 ${stock.firstDate || "n/a"}</span></td>
           <td><div class="score"><span style="width:${stock.averageScore || 0}%"></span></div>${stock.averageScore ?? "n/a"}</td>
           <td>${stock.latestDate || "n/a"}<span>${money(stock.latestMarketCap)}</span></td>
-          <td><a class="ghost action-link" href="/stock.html?symbol=${encodeURIComponent(stock.symbol)}" target="_blank" rel="noreferrer" title="打开公司、财务、技术面、新闻和 Markdown 报告">分析</a></td>
+          <td>${actionButtons(stock.symbol)}</td>
         </tr>
       `
     )
