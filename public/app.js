@@ -176,7 +176,7 @@ function renderStocks(data) {
           <td>${money(stock.marketCap)}</td>
           <td>${Number.isFinite(stock.pe) ? stock.pe.toFixed(1) : "n/a"}</td>
           <td><div class="score"><span style="width:${stock.score}%"></span></div>${stock.score}</td>
-          <td><button class="ghost" data-analyze="${stock.symbol}">分析</button></td>
+          <td><button class="ghost" data-analyze="${stock.symbol}" title="打开公司、财务、技术面、新闻和 Markdown 报告">分析</button></td>
         </tr>
       `
     )
@@ -207,7 +207,7 @@ function renderHistory(data) {
           <td>${stock.seenDays || 1} 天<span>${stock.appearances} 条记录；首次 ${stock.firstDate || "n/a"}</span></td>
           <td><div class="score"><span style="width:${stock.averageScore || 0}%"></span></div>${stock.averageScore ?? "n/a"}</td>
           <td>${stock.latestDate || "n/a"}<span>${money(stock.latestMarketCap)}</span></td>
-          <td><button class="ghost" data-analyze="${stock.symbol}">分析</button></td>
+          <td><button class="ghost" data-analyze="${stock.symbol}" title="打开公司、财务、技术面、新闻和 Markdown 报告">分析</button></td>
         </tr>
       `
     )
@@ -272,6 +272,7 @@ async function analyzeStock(symbol) {
     $("detail-title").textContent = `${symbol} 研究摘要`;
     $("company-description").textContent = analysis.profile?.description || "暂无公司描述。";
     $("detail-score").textContent = `${analysis.score?.score ?? "n/a"}/100`;
+    $("detail-pe").textContent = Number.isFinite(analysis.financials?.pe) ? analysis.financials.pe.toFixed(1) : "n/a";
     $("detail-revenue-growth").textContent = ratioPct(analysis.financials?.revenueGrowth);
     $("detail-gross-margin").textContent = ratioPct(analysis.financials?.grossMargin);
     $("detail-fcf").textContent = money(analysis.financials?.freeCashFlow);

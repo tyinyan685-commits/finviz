@@ -17,6 +17,12 @@ function ratio(numerator, denominator) {
   return numerator / denominator;
 }
 
+function peFromEarningsYield(value) {
+  const earningsYield = safeNumber(value);
+  if (earningsYield === null || earningsYield <= 0) return null;
+  return 1 / earningsYield;
+}
+
 export async function loadFundamentals(symbol, marketCap = null) {
   const cached = fundamentalCache.get(symbol);
   if (cached && Date.now() - cached.createdAt < FUNDAMENTAL_CACHE_TTL_MS) {
@@ -47,6 +53,7 @@ export async function loadFundamentals(symbol, marketCap = null) {
   const totalEquity = safeNumber(latestBalance.totalStockholdersEquity);
   const freeCashFlow = safeNumber(latestCashFlow.freeCashFlow);
   const cap = safeNumber(marketCap ?? metrics.marketCap);
+  const earningsYield = safeNumber(metrics.earningsYieldTTM);
 
   const data = {
     revenue,
@@ -63,7 +70,8 @@ export async function loadFundamentals(symbol, marketCap = null) {
     returnOnEquity: safeNumber(metrics.returnOnEquityTTM),
     returnOnInvestedCapital: safeNumber(metrics.returnOnInvestedCapitalTTM),
     evToEbitda: safeNumber(metrics.evToEBITDATTM),
-    earningsYield: safeNumber(metrics.earningsYieldTTM),
+    earningsYield,
+    pe: peFromEarningsYield(earningsYield),
     incomeQuality: safeNumber(metrics.incomeQualityTTM)
   };
 

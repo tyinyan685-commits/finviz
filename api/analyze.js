@@ -5,6 +5,12 @@ function first(value) {
   return Array.isArray(value) ? value[0] || {} : value || {};
 }
 
+function peFromEarningsYield(value) {
+  const earningsYield = safeNumber(value);
+  if (earningsYield === null || earningsYield <= 0) return null;
+  return 1 / earningsYield;
+}
+
 export default async function handler(request, response) {
   const symbol = String(request.query.symbol || "").toUpperCase();
   if (!symbol) return response.status(400).json({ error: "Missing symbol" });
@@ -45,12 +51,13 @@ export default async function handler(request, response) {
     const grossMargin = revenue && grossProfit ? grossProfit / revenue : null;
     const operatingMargin = revenue && operatingIncome ? operatingIncome / revenue : null;
     const debtToEquity = totalDebt && totalEquity ? totalDebt / totalEquity : null;
+    const pe = safeNumber(quote.pe ?? metrics.peRatioTTM) ?? peFromEarningsYield(metrics.earningsYieldTTM);
 
     const score = scoreStock({
       marketCap: safeNumber(quote.marketCap ?? profile.mktCap),
       volume: safeNumber(quote.volume),
-      changesPercentage: safeNumber(quote.changesPercentage),
-      pe: safeNumber(quote.pe ?? metrics.peRatioTTM),
+      changesPercentage: safeNumber(quote.changesPercentage ?? quote.changePercentage),
+      pe,
       eps: safeNumber(quote.eps),
       revenueGrowth,
       netIncomeGrowth,
@@ -73,7 +80,8 @@ export default async function handler(request, response) {
         operatingMargin,
         freeCashFlow,
         totalDebt,
-        debtToEquity
+        debtToEquity,
+        pe
       },
       news: newsData.slice(0, 8),
       score
