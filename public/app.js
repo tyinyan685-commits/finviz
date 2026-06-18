@@ -2,7 +2,7 @@ let presets = [];
 let presetId = "momentum_breakout";
 let selectedSymbol = "";
 const snapshotKey = "investment-radar-snapshot";
-const deepResearchBaseUrl = "https://invest-tan-three.vercel.app/";
+const deepResearchBaseUrl = "https://stocks.wiseain.com/";
 const presetLogic = {
   momentum_breakout: {
     title: "强势突破逻辑",
