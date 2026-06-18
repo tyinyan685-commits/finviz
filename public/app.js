@@ -54,8 +54,8 @@ function deepResearchUrl(symbol) {
 function actionButtons(symbol) {
   return `
     <div class="action-group">
-      <a class="ghost action-link" href="${deepResearchUrl(symbol)}" target="_blank" rel="noreferrer" title="打开深度工具，并把当前股票代码传过去">深度研判</a>
-      <a class="ghost action-link secondary-action" href="${summaryUrl(symbol)}" target="_blank" rel="noreferrer" title="查看雷达生成的公司、财务、技术面、新闻和 Markdown 摘要">快速摘要</a>
+      <a class="action-link primary-action" href="${deepResearchUrl(symbol)}" target="_blank" rel="noreferrer" title="打开深度工具，并把当前股票代码传过去">深度研判</a>
+      <a class="action-link secondary-action" href="${summaryUrl(symbol)}" target="_blank" rel="noreferrer" title="查看雷达生成的公司、财务、技术面、新闻和 Markdown 摘要">快速摘要</a>
     </div>
   `;
 }
@@ -153,7 +153,16 @@ function renderScreenLogic(preset) {
     title: "筛选逻辑",
     text: "先做基础股票池过滤，再结合价格、成交量、技术面和可用基本面计算研究优先级。"
   };
-  $("screen-logic").innerHTML = `<strong>${logic.title}</strong><span>${logic.text}</span>`;
+  $("screen-logic").innerHTML = `
+    <details class="info-toggle">
+      <summary>${logic.title}</summary>
+      <p>${logic.text}</p>
+    </details>
+    <details class="info-toggle">
+      <summary>评分逻辑</summary>
+      <p>单股研究优先级从 50 分起算：市值大、成交活跃、短期价格走强、收入/利润增长、利润率较好、中长期趋势站上均线会加分；RSI 过热、PE 过高、杠杆偏高、市值太小会扣分。评分只用于排序研究优先级，不代表买入或卖出建议。</p>
+    </details>
+  `;
 }
 
 function renderHistoryCoverage(data) {
@@ -193,7 +202,7 @@ function renderStocks(data) {
       (stock, index) => `
         <tr class="${selectedSymbol === stock.symbol ? "selected" : ""}">
           <td>${index + 1}</td>
-          <td><strong>${stock.symbol}</strong><span>${stock.name || ""}</span></td>
+          <td><strong>${stock.symbol}</strong><span>${stock.name || ""}</span>${actionButtons(stock.symbol)}</td>
           <td>${stock.sector || "n/a"}<span>${stock.industry || ""}</span></td>
           <td>${Number.isFinite(stock.price) ? stock.price.toFixed(2) : "n/a"}</td>
           <td class="${Number(stock.changesPercentage) >= 0 ? "green" : "red"}">${pct(stock.changesPercentage)}</td>
@@ -201,7 +210,6 @@ function renderStocks(data) {
           <td>${Number.isFinite(stock.relativeVolume) ? `${stock.relativeVolume.toFixed(1)}x` : "n/a"}</td>
           <td>${money(stock.marketCap)}</td>
           <td><div class="score"><span style="width:${stock.score}%"></span></div>${stock.score}</td>
-          <td>${actionButtons(stock.symbol)}</td>
         </tr>
       `
     )
@@ -220,7 +228,7 @@ function renderHistory(data) {
     .map(
       (stock) => `
         <tr>
-          <td><strong>${stock.symbol}</strong><span>${stock.name || ""}</span></td>
+          <td><strong>${stock.symbol}</strong><span>${stock.name || ""}</span>${actionButtons(stock.symbol)}</td>
           <td>${stock.sector || "n/a"}<span>${stock.industry || ""}</span></td>
           <td>${stock.isNew ? '<span class="badge green-badge">新增</span>' : '<span class="badge">跟踪</span>'}<span>${
             stock.latestPresetCount || stock.presetCount
@@ -228,12 +236,11 @@ function renderHistory(data) {
           <td>${stock.seenDays || 1} 天<span>${stock.appearances} 条记录；首次 ${stock.firstDate || "n/a"}</span></td>
           <td><div class="score"><span style="width:${stock.averageScore || 0}%"></span></div>${stock.averageScore ?? "n/a"}</td>
           <td>${stock.latestDate || "n/a"}<span>${money(stock.latestMarketCap)}</span></td>
-          <td>${actionButtons(stock.symbol)}</td>
         </tr>
       `
     )
     .join("")
-    : `<tr><td colspan="7"><strong>暂无历史候选</strong><span>先等待 Vercel Cron 运行，或手动触发 /api/snapshot 保存一次雷达快照。</span></td></tr>`;
+    : `<tr><td colspan="6"><strong>暂无历史候选</strong><span>先等待 Vercel Cron 运行，或手动触发 /api/snapshot 保存一次雷达快照。</span></td></tr>`;
 
   showMainView("history");
 }
