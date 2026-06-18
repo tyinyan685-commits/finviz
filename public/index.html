@@ -44,6 +44,10 @@
             <div class="metric"><span>重复出现</span><strong id="count-stayed">0</strong></div>
             <div class="metric"><span>移出</span><strong id="count-removed">0</strong></div>
           </div>
+          <div class="logic-box">
+            <strong>顶部数量口径</strong>
+            <span>候选股票是当前雷达本次筛出的数量；新增、重复出现、移出只和你这个浏览器上一次运行同一个雷达的结果比较，保存在本地 localStorage。它不是严格的“今天 vs 昨天”。真正跨天记录请看历史队列，它来自 Supabase 每日快照。</span>
+          </div>
 
           <div id="screen-panel" class="panel hidden">
             <div class="section-head">
@@ -55,6 +59,10 @@
               <div id="sector-chips" class="chips"></div>
             </div>
             <div id="screen-logic" class="logic-box"></div>
+            <div class="logic-box">
+              <strong>评分逻辑</strong>
+              <span>单股研究优先级从 50 分起算：市值大、成交活跃、短期价格走强、收入/利润增长、毛利率和经营利润率较好、中长期趋势站上均线会加分；RSI 过热、PE 过高、杠杆偏高、市值太小会扣分。评分只用于排序研究优先级，不代表买入或卖出建议。</span>
+            </div>
             <div class="table-wrap">
               <table>
                 <thead>

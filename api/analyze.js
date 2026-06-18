@@ -1,4 +1,4 @@
-import { fmpGet, fmpV3Get, optional, safeNumber } from "./_lib/fmp.js";
+import { fmpGet, optional, safeNumber } from "./_lib/fmp.js";
 import { scoreStock } from "./_lib/scoring.js";
 
 function first(value) {
@@ -16,7 +16,7 @@ export default async function handler(request, response) {
   if (!symbol) return response.status(400).json({ error: "Missing symbol" });
 
   try {
-    const [profileData, quoteData, metricsData, incomeData, balanceData, cashFlowData, newsData] =
+    const [profileData, quoteData, metricsData, incomeData, balanceData, cashFlowData, stockNewsData, pressReleaseData] =
       await Promise.all([
         optional(fmpGet("/profile", { symbol }), []),
         optional(fmpGet("/quote", { symbol }), []),
@@ -24,7 +24,8 @@ export default async function handler(request, response) {
         optional(fmpGet("/income-statement", { symbol, period: "annual", limit: 4 }), []),
         optional(fmpGet("/balance-sheet-statement", { symbol, period: "annual", limit: 2 }), []),
         optional(fmpGet("/cash-flow-statement", { symbol, period: "annual", limit: 2 }), []),
-        optional(fmpV3Get("/stock_news", { tickers: symbol, limit: 8 }), [])
+        optional(fmpGet("/news/stock", { symbols: symbol, limit: 8 }), []),
+        optional(fmpGet("/news/press-releases", { symbols: symbol, limit: 4 }), [])
       ]);
 
     const profile = first(profileData);
@@ -66,6 +67,10 @@ export default async function handler(request, response) {
       debtToEquity
     });
 
+    const news = [...stockNewsData, ...pressReleaseData]
+      .filter((item) => item && (item.title || item.text || item.url))
+      .slice(0, 8);
+
     response.status(200).json({
       symbol,
       profile,
@@ -83,7 +88,12 @@ export default async function handler(request, response) {
         debtToEquity,
         pe
       },
-      news: newsData.slice(0, 8),
+      news,
+      newsMeta: {
+        source: "FMP stable news/stock + news/press-releases",
+        count: news.length,
+        emptyReason: news.length ? null : "FMP 当前没有返回该股票的新闻或新闻权限暂不可用。"
+      },
       score
     });
   } catch (error) {
