@@ -52,6 +52,14 @@ h3 { margin-top: 18px; font-size: 13px; }
   gap: 18px;
   padding: 18px 24px 28px;
 }
+.stock-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 24px 28px;
+}
 .sidebar, .content { display: flex; flex-direction: column; gap: 16px; }
 .panel, .metric, .empty, .error {
   border: 1px solid var(--line);
@@ -79,6 +87,7 @@ h3 { margin-top: 18px; font-size: 13px; }
   font-weight: 700;
 }
 .ghost { padding: 7px 10px; background: #fff; color: var(--text); }
+.action-link { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .full { width: 100%; margin-top: 12px; }
 .ghost:hover, .preset:hover, .link-button:hover { border-color: var(--accent); }
 .link-button {

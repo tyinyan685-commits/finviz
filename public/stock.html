@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stock Research</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main>
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">单股研究</p>
+          <h1 id="stock-title">Stock Research</h1>
+        </div>
+        <a class="ghost action-link" href="/">返回雷达</a>
+      </section>
+
+      <section class="stock-page">
+        <div id="error" class="error hidden"></div>
+
+        <section id="loading" class="empty">
+          <h2>加载研究数据</h2>
+          <p>正在获取公司、财务、技术面、新闻和 Markdown 报告。</p>
+        </section>
+
+        <section id="summary" class="details-grid hidden">
+          <div class="panel">
+            <h2 id="detail-title"></h2>
+            <p id="company-description" class="lead"></p>
+            <div class="kv">
+              <span>研究优先级</span><strong id="detail-score"></strong>
+              <span>PE</span><strong id="detail-pe"></strong>
+              <span>收入增长</span><strong id="detail-revenue-growth"></strong>
+              <span>毛利率</span><strong id="detail-gross-margin"></strong>
+              <span>自由现金流</span><strong id="detail-fcf"></strong>
+            </div>
+            <h3>理由</h3>
+            <ul id="reason-list"></ul>
+            <h3>风险</h3>
+            <ul id="risk-list"></ul>
+          </div>
+
+          <div class="panel">
+            <h2>技术面</h2>
+            <div class="kv">
+              <span>最新价</span><strong id="tech-latest"></strong>
+              <span>20日距离</span><strong id="tech-sma20"></strong>
+              <span>50日距离</span><strong id="tech-sma50"></strong>
+              <span>RSI</span><strong id="tech-rsi"></strong>
+            </div>
+            <ul id="tech-signals"></ul>
+          </div>
+        </section>
+
+        <section id="research" class="details-grid hidden">
+          <div class="panel">
+            <h2>新闻线索</h2>
+            <div id="news-list" class="news-list"></div>
+          </div>
+          <div class="panel report">
+            <div class="section-head">
+              <h2>Markdown 报告</h2>
+              <button id="copy-report" class="ghost">复制</button>
+            </div>
+            <pre id="report-text"></pre>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script src="/stock.js" type="module"></script>
+  </body>
+</html>

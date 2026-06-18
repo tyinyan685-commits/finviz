@@ -1,7 +1,6 @@
 let presets = [];
 let presetId = "momentum_breakout";
 let selectedSymbol = "";
-let reportText = "";
 const snapshotKey = "investment-radar-snapshot";
 const presetLogic = {
   momentum_breakout: {
@@ -47,8 +46,6 @@ function showMainView(view) {
   show("screen-panel", view === "screen");
   show("history-panel", view === "history");
   show("empty", false);
-  show("details", false);
-  show("research", false);
   const target = view === "history" ? $("history-panel") : $("screen-panel");
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -185,17 +182,12 @@ function renderStocks(data) {
           <td class="${Number(stock.change20d) >= 0 ? "green" : "red"}">${pct(stock.change20d)}</td>
           <td>${Number.isFinite(stock.relativeVolume) ? `${stock.relativeVolume.toFixed(1)}x` : "n/a"}</td>
           <td>${money(stock.marketCap)}</td>
-          <td>${Number.isFinite(stock.pe) ? stock.pe.toFixed(1) : "n/a"}</td>
           <td><div class="score"><span style="width:${stock.score}%"></span></div>${stock.score}</td>
-          <td><button class="ghost" data-analyze="${stock.symbol}" title="打开公司、财务、技术面、新闻和 Markdown 报告">分析</button></td>
+          <td><a class="ghost action-link" href="/stock.html?symbol=${encodeURIComponent(stock.symbol)}" target="_blank" rel="noreferrer" title="打开公司、财务、技术面、新闻和 Markdown 报告">分析</a></td>
         </tr>
       `
     )
     .join("");
-
-  document.querySelectorAll("[data-analyze]").forEach((button) => {
-    button.addEventListener("click", () => analyzeStock(button.dataset.analyze));
-  });
 }
 
 function renderHistory(data) {
@@ -218,16 +210,13 @@ function renderHistory(data) {
           <td>${stock.seenDays || 1} 天<span>${stock.appearances} 条记录；首次 ${stock.firstDate || "n/a"}</span></td>
           <td><div class="score"><span style="width:${stock.averageScore || 0}%"></span></div>${stock.averageScore ?? "n/a"}</td>
           <td>${stock.latestDate || "n/a"}<span>${money(stock.latestMarketCap)}</span></td>
-          <td><button class="ghost" data-analyze="${stock.symbol}" title="打开公司、财务、技术面、新闻和 Markdown 报告">分析</button></td>
+          <td><a class="ghost action-link" href="/stock.html?symbol=${encodeURIComponent(stock.symbol)}" target="_blank" rel="noreferrer" title="打开公司、财务、技术面、新闻和 Markdown 报告">分析</a></td>
         </tr>
       `
     )
     .join("")
     : `<tr><td colspan="7"><strong>暂无历史候选</strong><span>先等待 Vercel Cron 运行，或手动触发 /api/snapshot 保存一次雷达快照。</span></td></tr>`;
 
-  document.querySelectorAll("#history-table [data-analyze]").forEach((button) => {
-    button.addEventListener("click", () => analyzeStock(button.dataset.analyze));
-  });
   showMainView("history");
 }
 
@@ -266,65 +255,6 @@ function renderList(id, items) {
   setHtml(id, (items || []).map((item) => `<li>${item}</li>`).join(""));
 }
 
-async function analyzeStock(symbol) {
-  if (!symbol) return;
-  selectedSymbol = symbol;
-  setError("");
-  show("details", false);
-  show("research", false);
-  setText("run-screen", `分析 ${symbol}...`);
-  $("run-screen").disabled = true;
-  try {
-    const [analysisResult, technicalResult, reportResult] = await Promise.allSettled([
-      getJson(`/api/analyze?symbol=${encodeURIComponent(symbol)}&ts=${Date.now()}`),
-      getJson(`/api/technical?symbol=${encodeURIComponent(symbol)}&ts=${Date.now()}`),
-      fetch(`/api/report?symbol=${encodeURIComponent(symbol)}&ts=${Date.now()}`)
-    ]);
-
-    if (analysisResult.status !== "fulfilled") throw analysisResult.reason;
-    const analysis = analysisResult.value;
-    const technical = technicalResult.status === "fulfilled" ? technicalResult.value : {};
-    const reportResponse = reportResult.status === "fulfilled" ? reportResult.value : null;
-    reportText = reportResponse?.ok ? await reportResponse.text() : "报告暂时不可用。";
-
-    setText("detail-title", `${symbol} 研究摘要`);
-    setText("company-description", analysis.profile?.description || "暂无公司描述。");
-    setText("detail-score", `${analysis.score?.score ?? "n/a"}/100`);
-    setText("detail-pe", Number.isFinite(analysis.financials?.pe) ? analysis.financials.pe.toFixed(1) : "n/a");
-    setText("detail-revenue-growth", ratioPct(analysis.financials?.revenueGrowth));
-    setText("detail-gross-margin", ratioPct(analysis.financials?.grossMargin));
-    setText("detail-fcf", money(analysis.financials?.freeCashFlow));
-    renderList("reason-list", analysis.score?.reasons || []);
-    renderList("risk-list", analysis.score?.risks || []);
-
-    setText("tech-latest", technical.latest ?? "n/a");
-    setText("tech-sma20", `${pct(technical.sma20Distance)}`);
-    setText("tech-sma50", `${pct(technical.sma50Distance)}`);
-    setText("tech-rsi", Number.isFinite(technical.rsi14) ? technical.rsi14.toFixed(1) : "n/a");
-    renderList("tech-signals", technical.signals || []);
-
-    setHtml("news-list", (analysis.news || [])
-      .slice(0, 6)
-      .map(
-        (item) => `
-          <a href="${item.url || "#"}" target="_blank" rel="noreferrer">
-            <span>${item.publishedDate ? String(item.publishedDate).slice(0, 10) : ""}</span>
-            ${item.title || "Untitled"}
-          </a>
-        `
-      )
-      .join(""));
-    setText("report-text", reportText);
-    show("details");
-    show("research");
-  } catch (error) {
-    setError(error.message);
-  } finally {
-    setText("run-screen", "运行筛选");
-    $("run-screen").disabled = false;
-  }
-}
-
 async function init() {
   try {
     const data = await getJson("/api/presets");
@@ -337,13 +267,5 @@ async function init() {
 
 $("run-screen").addEventListener("click", runScreen);
 $("load-history").addEventListener("click", loadHistory);
-$("copy-report").addEventListener("click", async () => {
-  if (!reportText) return;
-  await navigator.clipboard.writeText(reportText);
-  $("copy-report").textContent = "已复制";
-  setTimeout(() => {
-    $("copy-report").textContent = "复制";
-  }, 1200);
-});
 
 init();
