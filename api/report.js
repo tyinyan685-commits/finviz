@@ -14,6 +14,11 @@ function money(value) {
   return `$${number.toFixed(0)}`;
 }
 
+function formatNumber(value, digits = 1) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(digits) : "n/a";
+}
+
 export default async function handler(request, response) {
   const symbol = String(request.query.symbol || "").toUpperCase();
   if (!symbol) return response.status(400).json({ error: "Missing symbol" });
@@ -46,7 +51,7 @@ ${symbol} 当前研究优先级为 **${analysis.score?.score ?? "n/a"}/100**。�
 - 公司：${analysis.profile?.companyName || analysis.quote?.name || symbol}
 - 行业：${analysis.profile?.sector || "n/a"} / ${analysis.profile?.industry || "n/a"}
 - 市值：${money(analysis.quote?.marketCap || analysis.profile?.mktCap)}
-- PE：${analysis.quote?.pe || analysis.metrics?.peRatioTTM || "n/a"}
+- PE：${formatNumber(analysis.financials?.pe ?? analysis.quote?.pe ?? analysis.metrics?.peRatioTTM)}
 
 ## 财务质量
 

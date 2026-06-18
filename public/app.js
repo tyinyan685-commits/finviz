@@ -29,7 +29,18 @@ const presetLogic = {
 const $ = (id) => document.getElementById(id);
 
 function show(id, visible = true) {
-  $(id).classList.toggle("hidden", !visible);
+  const element = $(id);
+  if (element) element.classList.toggle("hidden", !visible);
+}
+
+function setText(id, value) {
+  const element = $(id);
+  if (element) element.textContent = value;
+}
+
+function setHtml(id, value) {
+  const element = $(id);
+  if (element) element.innerHTML = value;
 }
 
 function showMainView(view) {
@@ -43,7 +54,7 @@ function showMainView(view) {
 }
 
 function setError(message) {
-  $("error").textContent = message || "";
+  setText("error", message || "");
   show("error", Boolean(message));
 }
 
@@ -252,7 +263,7 @@ async function loadHistory() {
 }
 
 function renderList(id, items) {
-  $(id).innerHTML = (items || []).map((item) => `<li>${item}</li>`).join("");
+  setHtml(id, (items || []).map((item) => `<li>${item}</li>`).join(""));
 }
 
 async function analyzeStock(symbol) {
@@ -261,31 +272,38 @@ async function analyzeStock(symbol) {
   setError("");
   show("details", false);
   show("research", false);
+  setText("run-screen", `分析 ${symbol}...`);
+  $("run-screen").disabled = true;
   try {
-    const [analysis, technical, reportResponse] = await Promise.all([
-      getJson(`/api/analyze?symbol=${encodeURIComponent(symbol)}`),
-      getJson(`/api/technical?symbol=${encodeURIComponent(symbol)}`),
-      fetch(`/api/report?symbol=${encodeURIComponent(symbol)}`)
+    const [analysisResult, technicalResult, reportResult] = await Promise.allSettled([
+      getJson(`/api/analyze?symbol=${encodeURIComponent(symbol)}&ts=${Date.now()}`),
+      getJson(`/api/technical?symbol=${encodeURIComponent(symbol)}&ts=${Date.now()}`),
+      fetch(`/api/report?symbol=${encodeURIComponent(symbol)}&ts=${Date.now()}`)
     ]);
-    reportText = await reportResponse.text();
 
-    $("detail-title").textContent = `${symbol} 研究摘要`;
-    $("company-description").textContent = analysis.profile?.description || "暂无公司描述。";
-    $("detail-score").textContent = `${analysis.score?.score ?? "n/a"}/100`;
-    $("detail-pe").textContent = Number.isFinite(analysis.financials?.pe) ? analysis.financials.pe.toFixed(1) : "n/a";
-    $("detail-revenue-growth").textContent = ratioPct(analysis.financials?.revenueGrowth);
-    $("detail-gross-margin").textContent = ratioPct(analysis.financials?.grossMargin);
-    $("detail-fcf").textContent = money(analysis.financials?.freeCashFlow);
+    if (analysisResult.status !== "fulfilled") throw analysisResult.reason;
+    const analysis = analysisResult.value;
+    const technical = technicalResult.status === "fulfilled" ? technicalResult.value : {};
+    const reportResponse = reportResult.status === "fulfilled" ? reportResult.value : null;
+    reportText = reportResponse?.ok ? await reportResponse.text() : "报告暂时不可用。";
+
+    setText("detail-title", `${symbol} 研究摘要`);
+    setText("company-description", analysis.profile?.description || "暂无公司描述。");
+    setText("detail-score", `${analysis.score?.score ?? "n/a"}/100`);
+    setText("detail-pe", Number.isFinite(analysis.financials?.pe) ? analysis.financials.pe.toFixed(1) : "n/a");
+    setText("detail-revenue-growth", ratioPct(analysis.financials?.revenueGrowth));
+    setText("detail-gross-margin", ratioPct(analysis.financials?.grossMargin));
+    setText("detail-fcf", money(analysis.financials?.freeCashFlow));
     renderList("reason-list", analysis.score?.reasons || []);
     renderList("risk-list", analysis.score?.risks || []);
 
-    $("tech-latest").textContent = technical.latest ?? "n/a";
-    $("tech-sma20").textContent = `${pct(technical.sma20Distance)}`;
-    $("tech-sma50").textContent = `${pct(technical.sma50Distance)}`;
-    $("tech-rsi").textContent = Number.isFinite(technical.rsi14) ? technical.rsi14.toFixed(1) : "n/a";
+    setText("tech-latest", technical.latest ?? "n/a");
+    setText("tech-sma20", `${pct(technical.sma20Distance)}`);
+    setText("tech-sma50", `${pct(technical.sma50Distance)}`);
+    setText("tech-rsi", Number.isFinite(technical.rsi14) ? technical.rsi14.toFixed(1) : "n/a");
     renderList("tech-signals", technical.signals || []);
 
-    $("news-list").innerHTML = (analysis.news || [])
+    setHtml("news-list", (analysis.news || [])
       .slice(0, 6)
       .map(
         (item) => `
@@ -295,12 +313,15 @@ async function analyzeStock(symbol) {
           </a>
         `
       )
-      .join("");
-    $("report-text").textContent = reportText;
+      .join(""));
+    setText("report-text", reportText);
     show("details");
     show("research");
   } catch (error) {
     setError(error.message);
+  } finally {
+    setText("run-screen", "运行筛选");
+    $("run-screen").disabled = false;
   }
 }
 
