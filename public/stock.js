@@ -89,12 +89,26 @@ function businessLines(description) {
   return [...new Set(matches.filter(([keyword]) => text.includes(keyword)).map(([, label]) => label))].slice(0, 6);
 }
 
-function trendText(value, positiveText, negativeText, flatText = "基本持平") {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return "数据暂缺";
-  if (number > 0.05) return positiveText;
-  if (number < -0.05) return negativeText;
-  return flatText;
+function operationSummary(financials) {
+  const revenueGrowth = Number(financials.revenueGrowth);
+  const netIncomeGrowth = Number(financials.netIncomeGrowth);
+
+  if (!Number.isFinite(revenueGrowth) && !Number.isFinite(netIncomeGrowth)) {
+    return "经营状况：当前财报数据不完整，建议先看最近一份年报或季报，确认收入来源、盈利质量和管理层指引。";
+  }
+  if (revenueGrowth > 0.05 && netIncomeGrowth > 0.05) {
+    return "经营状况：最近年度收入和盈利同步改善，业务动能较好，下一步重点看这种增长是否来自主营业务并能否延续。";
+  }
+  if (revenueGrowth > 0.05 && netIncomeGrowth <= 0.05) {
+    return "经营状况：收入端仍有增长，但盈利改善不明显，下一步要重点核对成本、费用和价格压力。";
+  }
+  if (revenueGrowth <= 0.05 && netIncomeGrowth > 0.05) {
+    return "经营状况：收入增长不强，但盈利有所改善，可能来自费用控制、产品结构或一次性因素，需要继续拆解质量。";
+  }
+  if (revenueGrowth < -0.05 || netIncomeGrowth < -0.05) {
+    return "经营状况：最近年度增长或盈利出现压力，适合先作为观察对象，重点查明是周期性波动还是公司竞争力变化。";
+  }
+  return "经营状况：最近年度整体变化不大，短期更需要结合新闻、行业周期和技术面确认是否有新的催化。";
 }
 
 function companySummaryCn(analysis) {
@@ -110,23 +124,8 @@ function companySummaryCn(analysis) {
   const employeeText = Number.isFinite(employees) ? `，约有 ${employees.toLocaleString()} 名员工` : "";
   const lines = businessLines(profile.description);
   const lineText = lines.length ? `，简介中提到的业务包括${lines.join("、")}` : "";
-  const revenueTrend = trendText(financials.revenueGrowth, "收入保持增长", "收入出现下滑");
-  const incomeTrend = trendText(financials.netIncomeGrowth, "净利润改善", "净利润承压");
-  const grossMargin = Number(financials.grossMargin);
-  const operatingMargin = Number(financials.operatingMargin);
-  const marginText =
-    Number.isFinite(grossMargin) && Number.isFinite(operatingMargin)
-      ? `毛利率约 ${ratioPct(grossMargin)}，经营利润率约 ${ratioPct(operatingMargin)}`
-      : "利润率数据暂缺";
-  const fcfText = Number.isFinite(Number(financials.freeCashFlow))
-    ? `自由现金流约 ${money(financials.freeCashFlow)}`
-    : "自由现金流数据暂缺";
-  const debtText = Number.isFinite(Number(financials.debtToEquity))
-    ? `债务/权益约 ${Number(financials.debtToEquity).toFixed(2)}`
-    : "杠杆数据暂缺";
-  const scoreText = analysis.score?.score ? `当前研究优先级为 ${analysis.score.score}/100` : "当前研究优先级暂缺";
 
-  return `主营业务：${name} 属于 ${sector} 板块、${industry} 行业，主要上市地为 ${exchange}，注册/运营地区为 ${country}${employeeText}${lineText}。经营状况：最近年度表现显示，${revenueTrend}，${incomeTrend}；${marginText}，${fcfText}，${debtText}；${scoreText}。`;
+  return `主营业务：${name} 属于 ${sector} 板块、${industry} 行业，主要上市地为 ${exchange}，注册/运营地区为 ${country}${employeeText}${lineText}。${operationSummary(financials)}`;
 }
 
 function symbolFromUrl() {
