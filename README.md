@@ -80,7 +80,7 @@ https://你的域名/api/history?days=30&limit=30
 - `GET /api/report?symbol=AAPL`：生成 Markdown 研究备忘录。
 - `GET /api/health`：检查 FMP key 对 quote/profile/key metrics/annual financials/historical price 的字段可用性。
 - `GET /api/snapshot?preset=all&limit=30`：运行雷达并保存到 Supabase。
-- `GET /api/rate-candidates?limit=20`：合并当天重复候选，调用分析站统一评级并保存到 Supabase。
+- `GET /api/rate-candidates?limit=40`：合并当天重复候选，调用分析站统一评级并保存到 Supabase。
 - `GET /api/history?days=30&limit=30`：读取历史候选池，生成研究优先队列。
 
 ## 数据逻辑
@@ -92,7 +92,7 @@ https://你的域名/api/history?days=30&limit=30
 - 基本面数据带有短期服务端内存缓存，用于减少重复点击时的 API 调用；Vercel 冷启动后会重新拉取。
 - 筛选结果带有 5 分钟服务端内存缓存，普通刷新优先复用结果；如需强制刷新，可请求 `/api/screen?preset=quality_growth&refresh=1`。
 - 每日快照会保存到 Supabase `radar_runs` 和 `radar_candidates`，历史队列按多雷达命中、出现次数和平均分排序。
-- 五个雷达完成后，评级任务会优先处理多雷达重叠和雷达分数较高的 20 只股票。结果保存到 `stock_ratings`，历史队列展示统一评分、评级和数据可信度。
+- 五个雷达完成后，评级任务会优先处理多雷达重叠和雷达分数较高的 40 只股票。每只约使用 6 次 FMP 调用，约 240 次/批，低于当前每分钟 300 次上限。结果保存到 `stock_ratings`，历史队列展示统一评分、评级和数据可信度。
 - Vercel Hobby Cron 可能延迟一小时；UTC 04:00 前完成的快照仍归入刚结束的美股交易日。评级任务安排在次日 UTC 01:30，并优先选择最近雷达覆盖最完整的日期，避免跨午夜拆成两天。
 - 统一评级由 `stocks.wiseain.com/api/rating` 生成，只使用真实接口数据；缺失指标按中性处理并降低可信度，模拟 K 线不会进入正式评级。
 - Finviz 目前作为人工复核入口，不作为自动数据源。

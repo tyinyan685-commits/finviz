@@ -31,7 +31,7 @@
       "schedule": "30 23 * * 1-5"
     },
     {
-      "path": "/api/rate-candidates?limit=20",
+      "path": "/api/rate-candidates?limit=40",
       "schedule": "30 1 * * 2-6"
     }
   ]

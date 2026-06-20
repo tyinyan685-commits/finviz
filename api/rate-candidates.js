@@ -90,7 +90,7 @@ async function mapConcurrent(items, concurrency, worker) {
 export default async function handler(request, response) {
   try {
     checkCronSecret(request);
-    const limit = Math.max(1, Math.min(30, Number(request.query.limit || 20)));
+    const limit = Math.max(1, Math.min(40, Number(request.query.limit || 40)));
     const requestedDate = request.query.date || null;
     const latestRuns = await supabaseRequest("/radar_runs", {
       params: {
@@ -112,7 +112,7 @@ export default async function handler(request, response) {
     });
     const candidates = groupCandidates(rows).slice(0, limit);
     const errors = [];
-    const completed = await mapConcurrent(candidates, 4, async (candidate) => {
+    const completed = await mapConcurrent(candidates, 5, async (candidate) => {
       try {
         return ratingRow(runDate, candidate, await loadRating(candidate.symbol));
       } catch (error) {
