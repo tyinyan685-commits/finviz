@@ -15,13 +15,23 @@ function dateDiffDays(start, end) {
 }
 
 function summarizeRuns(runs) {
-  const latestRunDate = runs.reduce((latest, run) => (run.run_date > latest ? run.run_date : latest), "");
+  const coverageByDate = new Map();
+  runs.forEach((run) => {
+    const presets = coverageByDate.get(run.run_date) || new Set();
+    presets.add(run.preset_id);
+    coverageByDate.set(run.run_date, presets);
+  });
+  const latestRunDate =
+    Array.from(coverageByDate.entries())
+      .sort((a, b) => b[1].size - a[1].size || b[0].localeCompare(a[0]))[0]?.[0] || "";
+  const newestRunDate = runs.reduce((latest, run) => (run.run_date > latest ? run.run_date : latest), "");
   const latestRuns = runs
     .filter((run) => run.run_date === latestRunDate)
     .sort((a, b) => a.preset_id.localeCompare(b.preset_id));
 
   return {
     latestRunDate: latestRunDate || null,
+    newestRunDate: newestRunDate || null,
     latestPresetIds: latestRuns.map((run) => run.preset_id),
     latestPresetCount: latestRuns.length,
     totalRuns: runs.length,
@@ -144,11 +154,15 @@ export default async function handler(request, response) {
     ]);
 
     const runSummary = summarizeRuns(runs);
+    const eligibleRatings = ratings.filter(
+      (rating) => !runSummary.latestRunDate || rating.run_date <= runSummary.latestRunDate
+    );
     const latestRatingBySymbol = new Map();
-    ratings.forEach((rating) => {
+    eligibleRatings.forEach((rating) => {
       if (!latestRatingBySymbol.has(rating.symbol)) latestRatingBySymbol.set(rating.symbol, rating);
     });
-    const candidates = summarize(rows, runSummary.latestRunDate)
+    const eligibleRows = rows.filter((row) => !runSummary.latestRunDate || row.run_date <= runSummary.latestRunDate);
+    const candidates = summarize(eligibleRows, runSummary.latestRunDate)
       .map((candidate) => {
         const rating = latestRatingBySymbol.get(candidate.symbol);
         return rating
@@ -175,7 +189,7 @@ export default async function handler(request, response) {
       days,
       generatedAt: new Date().toISOString(),
       totalRows: rows.length,
-      ratingRows: ratings.length,
+      ratingRows: eligibleRatings.length,
       runSummary,
       candidates
     });

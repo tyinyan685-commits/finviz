@@ -2,8 +2,12 @@ import { presets } from "./_lib/presets.js";
 import { supabaseRequest } from "./_lib/supabase.js";
 import { runScreen } from "./screen.js";
 
-function todayUtc() {
-  return new Date().toISOString().slice(0, 10);
+function effectiveRunDate() {
+  const now = new Date();
+  // Hobby Cron can run up to one hour late. Runs shortly after UTC midnight
+  // still belong to the US market session that just closed.
+  if (now.getUTCHours() < 4) now.setUTCDate(now.getUTCDate() - 1);
+  return now.toISOString().slice(0, 10);
 }
 
 function checkCronSecret(request) {
@@ -108,7 +112,7 @@ export default async function handler(request, response) {
     checkCronSecret(request);
     const requestedPreset = request.query.preset || "all";
     const limit = Number(request.query.limit || 30);
-    const runDate = request.query.date || todayUtc();
+    const runDate = request.query.date || effectiveRunDate();
     const selectedPresets =
       requestedPreset === "all" ? presets : presets.filter((preset) => preset.id === requestedPreset);
 

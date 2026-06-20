@@ -31,6 +31,17 @@ function groupCandidates(rows) {
     .sort((a, b) => b.presets.length - a.presets.length || b.radarScore - a.radarScore);
 }
 
+function bestCoveredRunDate(runs) {
+  const coverage = new Map();
+  for (const run of runs) {
+    const presets = coverage.get(run.run_date) || new Set();
+    presets.add(run.preset_id);
+    coverage.set(run.run_date, presets);
+  }
+  return Array.from(coverage.entries())
+    .sort((a, b) => b[1].size - a[1].size || b[0].localeCompare(a[0]))[0]?.[0] || null;
+}
+
 async function loadRating(symbol) {
   const base = (process.env.RATING_API_BASE || DEFAULT_RATING_API_BASE).replace(/\/$/, "");
   const response = await fetch(`${base}/api/rating?symbol=${encodeURIComponent(symbol)}`, {
@@ -83,13 +94,13 @@ export default async function handler(request, response) {
     const requestedDate = request.query.date || null;
     const latestRuns = await supabaseRequest("/radar_runs", {
       params: {
-        select: "run_date",
+        select: "run_date,preset_id",
         ...(requestedDate ? { run_date: `eq.${requestedDate}` } : {}),
-        order: "run_date.desc",
-        limit: 1
+        order: "run_date.desc,preset_id.asc",
+        limit: 50
       }
     });
-    const runDate = requestedDate || latestRuns[0]?.run_date;
+    const runDate = requestedDate || bestCoveredRunDate(latestRuns);
     if (!runDate) return response.status(404).json({ ok: false, error: "No radar snapshot found." });
 
     const rows = await supabaseRequest("/radar_candidates", {
@@ -121,6 +132,7 @@ export default async function handler(request, response) {
     return response.status(200).json({
       ok: true,
       runDate,
+      presetCoverage: new Set(latestRuns.filter((run) => run.run_date === runDate).map((run) => run.preset_id)).size,
       requested: candidates.length,
       saved: ratingRows.length,
       failed: errors.length,
