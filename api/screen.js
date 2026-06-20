@@ -183,42 +183,51 @@ function applyPresetFilter(presetId, stocks) {
   if (presetId === "momentum_breakout") {
     return stocks.filter(
       (stock) =>
+        stock.technicalReady === true &&
         (stock.marketCap ?? 0) < 500_000_000_000 &&
         (stock.volume ?? 0) > 500_000 &&
         (stock.price ?? 0) > 10 &&
-        (stock.change20d === null || stock.change20d > 0) &&
-        (stock.distance50 === null || stock.distance50 > 0) &&
-        (stock.distance200 === null || stock.distance200 > 0)
+        stock.change20d !== null && stock.change20d > 0 &&
+        stock.sma20Distance !== null && stock.sma20Distance > 0 &&
+        stock.distance50 !== null && stock.distance50 > 0 &&
+        stock.distance200 !== null && stock.distance200 > 0
     );
   }
   if (presetId === "quality_growth") {
     return stocks.filter(
       (stock) =>
+        stock.fundamentalReady === true &&
         (stock.marketCap ?? 0) > 10_000_000_000 &&
-        (stock.eps === null || stock.eps > 0) &&
-        (!stock.pe || (stock.pe > 5 && stock.pe < 80))
+        stock.netIncome !== null && stock.netIncome > 0 &&
+        stock.revenueGrowth !== null && stock.revenueGrowth > 0.1 &&
+        stock.netIncomeGrowth !== null && stock.netIncomeGrowth > 0 &&
+        (stock.returnOnInvestedCapital > 0.1 || stock.returnOnEquity > 0.15) &&
+        stock.freeCashFlow !== null && stock.freeCashFlow > 0 &&
+        stock.pe !== null && stock.pe > 5 && stock.pe < 80
     );
   }
   if (presetId === "pullback_watch") {
     return stocks.filter(
       (stock) =>
+        stock.technicalReady === true &&
         (stock.marketCap ?? 0) < 800_000_000_000 &&
         (stock.marketCap ?? 0) > 10_000_000_000 &&
-        (stock.distance200 === null || stock.distance200 > 0) &&
-        (stock.distance50 === null || (stock.distance50 > -12 && stock.distance50 < 5)) &&
-        (stock.rsi14 === null || stock.rsi14 < 65)
+        stock.distance200 !== null && stock.distance200 > 0 &&
+        stock.distance50 !== null && stock.distance50 > -12 && stock.distance50 < 5 &&
+        stock.rsi14 !== null && stock.rsi14 < 60
     );
   }
   if (presetId === "unusual_volume") {
     return stocks.filter(
       (stock) =>
+        stock.technicalReady === true &&
         (stock.marketCap ?? 0) < 50_000_000_000 &&
         (stock.volume ?? 0) > 1_000_000 &&
-        (stock.relativeVolume === null || stock.relativeVolume > 1.15 || Math.abs(stock.change5d ?? stock.changesPercentage ?? 0) > 4)
+        stock.relativeVolume !== null && stock.relativeVolume > 1.15
     );
   }
   if (presetId === "earnings_watch") {
-    return stocks.filter((stock) => (stock.marketCap ?? 0) < 300_000_000_000);
+    return stocks.filter((stock) => stock.earningsDate && (stock.marketCap ?? 0) < 300_000_000_000);
   }
   return stocks;
 }
@@ -329,19 +338,12 @@ export async function runScreen({ presetId, limit: requestedLimit, refresh = fal
     }
   }
 
-  let raw =
-    preset.id === "earnings_watch"
-      ? []
-      : await fmpGet("/company-screener", {
-          ...preset.fmpParams,
-          limit: rawLimit
-        });
-  if (preset.id === "earnings_watch") {
-    raw = await fmpGet("/company-screener", {
+  let raw = preset.id === "earnings_watch"
+    ? []
+    : await fmpGet("/company-screener", {
       ...preset.fmpParams,
       limit: rawLimit
     });
-  }
   const symbols = [...new Set(raw.map((row) => row.symbol).filter(Boolean))];
   const quotes = await quoteSymbols(symbols);
   const quoteMap = new Map(quotes.map((quote) => [quote.symbol, quote]));
@@ -351,8 +353,7 @@ export async function runScreen({ presetId, limit: requestedLimit, refresh = fal
     .filter((stock) => stock.symbol && stock.price && isCommonStock(rowFromStock(stock), stock));
 
   if (preset.id === "earnings_watch") {
-    const earningsStocks = await loadEarningsWatch(limit);
-    if (earningsStocks.length) baseStocks = earningsStocks;
+    baseStocks = await loadEarningsWatch(limit);
   }
 
   const prefilteredStocks = prefilterBeforeTechnical(preset.id, baseStocks);
@@ -366,10 +367,6 @@ export async function runScreen({ presetId, limit: requestedLimit, refresh = fal
   }
 
   let filteredStocks = applyPresetFilter(preset.id, baseStocks);
-  if (preset.id === "unusual_volume" && !filteredStocks.length) {
-    filteredStocks = baseStocks.filter((stock) => (stock.marketCap ?? 0) < 300_000_000_000 && (stock.volume ?? 0) > 1_000_000);
-  }
-  if (!filteredStocks.length) filteredStocks = baseStocks;
 
   const stocks = filteredStocks
     .map((stock) => {
@@ -393,7 +390,7 @@ export async function runScreen({ presetId, limit: requestedLimit, refresh = fal
       total: stocks.length,
       cached: false,
       cacheTtlSeconds: Math.round(SCREEN_CACHE_TTL_MS / 1000),
-      note: "技术指标来自 FMP 历史价格自行计算；基本面来自 FMP key metrics 和年度财报；估值/EPS 取决于当前 FMP 套餐字段可用性。"
+      note: "仅展示满足全部必需条件的股票；技术指标来自 FMP 历史价格自行计算（至少50条有效收盘价），基本面来自 FMP key metrics 和年度财报。缺失数据不会按命中处理。"
     },
     stocks
   };

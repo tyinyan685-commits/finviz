@@ -75,6 +75,17 @@ export async function loadFundamentals(symbol, marketCap = null) {
     incomeQuality: safeNumber(metrics.incomeQualityTTM)
   };
 
+  data.observationCount = [
+    data.revenue,
+    data.netIncome,
+    data.grossMargin,
+    data.operatingMargin,
+    data.freeCashFlow,
+    data.returnOnEquity,
+    data.returnOnInvestedCapital,
+    data.pe
+  ].filter((value) => value !== null).length;
+
   fundamentalCache.set(symbol, { createdAt: Date.now(), data });
   return data;
 }
@@ -89,7 +100,7 @@ export async function enrichStocksWithFundamentals(stocks, maxCount = 40, concur
       const stock = selected[cursor];
       cursor += 1;
       const fundamentals = await optional(loadFundamentals(stock.symbol, stock.marketCap), null);
-      if (fundamentals) enriched.set(stock.symbol, fundamentals);
+      if (fundamentals?.observationCount > 0) enriched.set(stock.symbol, fundamentals);
     }
   }
 
@@ -101,7 +112,8 @@ export async function enrichStocksWithFundamentals(stocks, maxCount = 40, concur
     return {
       ...stock,
       ...fundamentals,
-      fundamentalReady: true
+      fundamentalReady: fundamentals.observationCount > 0,
+      fundamentalObservationCount: fundamentals.observationCount
     };
   });
 }

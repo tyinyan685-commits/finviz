@@ -56,6 +56,7 @@ export function calculateTechnical(prices) {
   const high52Week = closes.length ? Math.max(...closes.slice(0, Math.min(252, closes.length))) : null;
 
   return {
+    observationCount: rows.length,
     latest: safeNumber(latest),
     sma20,
     sma50,
@@ -90,7 +91,7 @@ export async function enrichStocksWithTechnical(stocks, maxCount = 50, concurren
       const stock = selected[cursor];
       cursor += 1;
       const technical = await optional(loadTechnical(stock.symbol), null);
-      if (technical) enriched.set(stock.symbol, technical);
+      if (technical?.observationCount >= 50) enriched.set(stock.symbol, technical);
     }
   }
 
@@ -115,7 +116,8 @@ export async function enrichStocksWithTechnical(stocks, maxCount = 50, concurren
       change20d: technical.change20d,
       change60d: technical.change60d,
       distanceFromHigh52Week: technical.distanceFromHigh52Week,
-      technicalReady: true
+      technicalReady: technical.observationCount >= 50,
+      technicalObservationCount: technical.observationCount
     };
   });
 }

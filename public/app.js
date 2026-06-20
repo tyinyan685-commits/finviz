@@ -6,23 +6,23 @@ const deepResearchBaseUrl = "https://stocks.wiseain.com/";
 const presetLogic = {
   momentum_breakout: {
     title: "强势突破逻辑",
-    text: "基础过滤：市值大于 20 亿美元、成交量充足、股价大于 10 美元。排序更重视 20 日涨幅、5 日延续、相对成交量、价格是否站上 50/200 日均线以及是否接近 52 周高点。"
+    text: "必须满足：市值大于 20 亿美元、成交量大于 50 万、股价大于 10 美元，至少有 50 条真实日线，20 日涨幅为正，并同时站上 20/50/200 日均线。满足后再按延续性、相对成交量和距 52 周高点排序。缺失任一必需指标不会入选。"
   },
   quality_growth: {
     title: "优质成长逻辑",
-    text: "基础过滤：大市值、高流动性、正 EPS 或估值不过度异常。排序额外读取年度财报和 key metrics，重视收入增长、净利润增长、经营利润率、自由现金流收益率、ROIC/ROE、EV/EBITDA 和债务水平。"
+    text: "必须满足：市值大于 100 亿美元、年度营收同比增长超过 10%、净利润同比为正、自由现金流为正、ROIC 超过 10% 或 ROE 超过 15%，且 PE 在 5-80 倍。数据来自 FMP 年报和 TTM 指标，缺失任一必需指标不会入选。"
   },
   pullback_watch: {
     title: "强股回调逻辑",
-    text: "基础过滤：中大型、高流动性股票。排序寻找长期趋势仍在 200 日均线上方、短期靠近或略低于 50 日均线、RSI 没有过热的标的，用来观察回调后的二次机会。"
+    text: "必须满足：市值 100亿-8000 亿美元、成交量大于 80 万、至少 50 条真实日线、价格位于 200 日均线上方且距 50 日均线 -12% 至 +5%，RSI14 低于 60。它只表示进入回调观察区，不代表已经止跌。"
   },
   unusual_volume: {
     title: "异常放量逻辑",
-    text: "基础过滤：中小到中大型、成交量足够活跃的股票。排序重视相对成交量、短期涨跌幅和流动性；这个雷达只负责发现异常，后续必须用新闻和财报解释放量原因。"
+    text: "必须满足：市值低于 500 亿美元、成交量大于 100 万、至少 50 条真实日线，且当日成交量超过近 20 日均量的 1.15 倍。它只负责发现异常，后续必须用新闻和财报解释放量原因。"
   },
   earnings_watch: {
     title: "财报观察逻辑",
-    text: "基础过滤：未来两周财报相关候选和流动性合格股票。排序更重视财报日期、近期波动和市值，用来安排研究和风险提醒，不直接代表方向判断。"
+    text: "仅使用 FMP earnings-calendar 返回的未来 14 天财报日期，并要求市值和流动性合格。日历没有返回日期时不会用季度规律猜测，也不会用普通股票池补位；该雷达只用于排程和风险提醒。"
   }
 };
 
@@ -245,7 +245,7 @@ function renderHistory(data) {
           <td><div class="score"><span style="width:${stock.averageScore || 0}%"></span></div>${stock.averageScore ?? "n/a"}</td>
           <td class="rating-cell">${
             stock.rating
-              ? `<strong>${stock.rating.score ?? "n/a"} · ${stock.rating.label || "待判断"}</strong><span>可信度 ${stock.rating.confidence ?? 0}%</span>`
+              ? `<strong>${stock.rating.score ?? "n/a"} · ${stock.rating.label || "待判断"}</strong><span>指标完整度 ${stock.rating.confidence ?? 0}%</span>`
               : '<strong>等待评级</strong><span>每日雷达完成后自动生成</span>'
           }</td>
           <td>${stock.latestDate || "n/a"}<span>${money(stock.latestMarketCap)}</span></td>
