@@ -259,7 +259,9 @@ table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: 
 .history-table th:nth-child(3), .history-table td:nth-child(3) { width: 180px; }
 .history-table th:nth-child(4), .history-table td:nth-child(4) { width: 150px; }
 .history-table th:nth-child(5), .history-table td:nth-child(5) { width: 90px; }
-.history-table th:nth-child(6), .history-table td:nth-child(6) { width: 120px; }
+.history-table th:nth-child(6), .history-table td:nth-child(6) { width: 150px; }
+.history-table th:nth-child(7), .history-table td:nth-child(7) { width: 120px; }
+.rating-cell strong { color: var(--accent); }
 th, td { padding: 10px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
 th { position: sticky; top: 0; background: #f9fbfd; color: var(--muted); font-size: 12px; font-weight: 800; }
 td span {

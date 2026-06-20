@@ -243,12 +243,17 @@ function renderHistory(data) {
           } 个雷达：${(stock.latestPresetIds || stock.presetIds || []).join(", ")}</span></td>
           <td>${stock.seenDays || 1} 天<span>${stock.appearances} 条记录；首次 ${stock.firstDate || "n/a"}</span></td>
           <td><div class="score"><span style="width:${stock.averageScore || 0}%"></span></div>${stock.averageScore ?? "n/a"}</td>
+          <td class="rating-cell">${
+            stock.rating
+              ? `<strong>${stock.rating.score ?? "n/a"} · ${stock.rating.label || "待判断"}</strong><span>可信度 ${stock.rating.confidence ?? 0}%</span>`
+              : '<strong>等待评级</strong><span>每日雷达完成后自动生成</span>'
+          }</td>
           <td>${stock.latestDate || "n/a"}<span>${money(stock.latestMarketCap)}</span></td>
         </tr>
       `
     )
     .join("")
-    : `<tr><td colspan="6"><strong>暂无历史候选</strong><span>先等待 Vercel Cron 运行，或手动触发 /api/snapshot 保存一次雷达快照。</span></td></tr>`;
+    : `<tr><td colspan="7"><strong>暂无历史候选</strong><span>先等待 Vercel Cron 运行，或手动触发 /api/snapshot 保存一次雷达快照。</span></td></tr>`;
 
   showMainView("history");
 }

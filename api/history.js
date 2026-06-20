@@ -117,7 +117,7 @@ export default async function handler(request, response) {
     const days = Math.max(1, Math.min(120, Number(request.query.days || 30)));
     const limit = Math.max(1, Math.min(100, Number(request.query.limit || 30)));
     const since = daysAgo(days);
-    const [runs, rows] = await Promise.all([
+    const [runs, rows, ratings] = await Promise.all([
       supabaseRequest("/radar_runs", {
         params: {
           select: "run_date,preset_id,preset_name,stock_count,generated_at",
@@ -132,16 +132,50 @@ export default async function handler(request, response) {
           run_date: `gte.${since}`,
           order: "run_date.desc,score.desc"
         }
+      }),
+      supabaseRequest("/stock_ratings", {
+        params: {
+          select:
+            "run_date,symbol,score,rating,rating_en,confidence,fundamental_score,technical_score,sentiment_score,model_version,generated_at",
+          run_date: `gte.${since}`,
+          order: "run_date.desc,score.desc"
+        }
       })
     ]);
 
     const runSummary = summarizeRuns(runs);
-    const candidates = summarize(rows, runSummary.latestRunDate).slice(0, limit);
+    const latestRatingBySymbol = new Map();
+    ratings.forEach((rating) => {
+      if (!latestRatingBySymbol.has(rating.symbol)) latestRatingBySymbol.set(rating.symbol, rating);
+    });
+    const candidates = summarize(rows, runSummary.latestRunDate)
+      .map((candidate) => {
+        const rating = latestRatingBySymbol.get(candidate.symbol);
+        return rating
+          ? {
+              ...candidate,
+              rating: {
+                runDate: rating.run_date,
+                score: rating.score,
+                label: rating.rating,
+                labelEn: rating.rating_en,
+                confidence: rating.confidence,
+                fundamentalScore: rating.fundamental_score,
+                technicalScore: rating.technical_score,
+                sentimentScore: rating.sentiment_score,
+                modelVersion: rating.model_version,
+                generatedAt: rating.generated_at
+              }
+            }
+          : candidate;
+      })
+      .slice(0, limit);
     response.status(200).json({
       ok: true,
       days,
       generatedAt: new Date().toISOString(),
       totalRows: rows.length,
+      ratingRows: ratings.length,
       runSummary,
       candidates
     });

@@ -30,6 +30,7 @@ FMP_API_KEY=你的_FMP_API_KEY
 SUPABASE_URL=你的_SUPABASE_PROJECT_URL
 SUPABASE_SERVICE_ROLE_KEY=你的_SUPABASE_SERVICE_ROLE_KEY
 CRON_SECRET=一个你自己生成的长随机字符串
+RATING_API_BASE=https://stocks.wiseain.com（可选，默认即此地址）
 ```
 
 不要把真实 key 写进代码或提交到 GitHub。
@@ -45,6 +46,8 @@ CRON_SECRET=一个你自己生成的长随机字符串
 5. 在同一页面复制 `service_role` key，填入 Vercel 的 `SUPABASE_SERVICE_ROLE_KEY`。
 6. 在 Vercel 里添加 `CRON_SECRET`，建议使用 32 位以上随机字符串。
 7. 重新部署 Vercel。
+
+升级已有 Supabase 项目时，再次运行 `supabase/schema.sql` 是安全的：脚本使用 `create table if not exists`，会补建每日统一评级所需的 `stock_ratings` 表和索引。
 
 手动测试保存快照：
 
@@ -77,6 +80,7 @@ https://你的域名/api/history?days=30&limit=30
 - `GET /api/report?symbol=AAPL`：生成 Markdown 研究备忘录。
 - `GET /api/health`：检查 FMP key 对 quote/profile/key metrics/annual financials/historical price 的字段可用性。
 - `GET /api/snapshot?preset=all&limit=30`：运行雷达并保存到 Supabase。
+- `GET /api/rate-candidates?limit=20`：合并当天重复候选，调用分析站统一评级并保存到 Supabase。
 - `GET /api/history?days=30&limit=30`：读取历史候选池，生成研究优先队列。
 
 ## 数据逻辑
@@ -88,6 +92,8 @@ https://你的域名/api/history?days=30&limit=30
 - 基本面数据带有短期服务端内存缓存，用于减少重复点击时的 API 调用；Vercel 冷启动后会重新拉取。
 - 筛选结果带有 5 分钟服务端内存缓存，普通刷新优先复用结果；如需强制刷新，可请求 `/api/screen?preset=quality_growth&refresh=1`。
 - 每日快照会保存到 Supabase `radar_runs` 和 `radar_candidates`，历史队列按多雷达命中、出现次数和平均分排序。
+- 五个雷达完成后，评级任务会优先处理多雷达重叠和雷达分数较高的 20 只股票。结果保存到 `stock_ratings`，历史队列展示统一评分、评级和数据可信度。
+- 统一评级由 `stocks.wiseain.com/api/rating` 生成，只使用真实接口数据；缺失指标按中性处理并降低可信度，模拟 K 线不会进入正式评级。
 - Finviz 目前作为人工复核入口，不作为自动数据源。
 - 系统会过滤明显的 ETF、基金、权证、单位类、优先股、债券/票据类标的；仍建议对异常名称或价格做人工复核。
 - 估值、EPS、PE、基本面等字段取决于当前 FMP 套餐和 endpoint 权限，字段缺失时雷达会降级为价格/成交量/技术面优先。

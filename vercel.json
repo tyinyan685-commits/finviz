@@ -29,6 +29,10 @@
     {
       "path": "/api/snapshot?preset=earnings_watch&limit=15",
       "schedule": "30 23 * * 1-5"
+    },
+    {
+      "path": "/api/rate-candidates?limit=20",
+      "schedule": "45 23 * * 1-5"
     }
   ]
 }

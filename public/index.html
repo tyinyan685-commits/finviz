@@ -88,7 +88,7 @@
             </div>
             <details class="info-toggle panel-toggle">
               <summary>历史队列排序</summary>
-              <p>先看最新快照中的新增标的，再看最近命中的雷达数量，其次看过去 30 天出现次数和平均分。它不是买入清单，而是每天优先研究的候选池。</p>
+              <p>先看最新快照中的新增标的，再看最近命中的雷达数量，其次看过去 30 天出现次数和雷达均分。统一评级来自深度分析站，只使用真实数据并显示可信度；它仍是研究排序，不是自动交易指令。</p>
             </details>
             <div id="history-coverage" class="coverage-box"></div>
             <div class="table-wrap">
@@ -100,6 +100,7 @@
                     <th>最新信号</th>
                     <th>历史</th>
                     <th>均分</th>
+                    <th>统一评级</th>
                     <th>最近出现</th>
                   </tr>
                 </thead>
@@ -114,6 +115,6 @@
         </section>
       </section>
     </main>
-    <script src="/app.js?v=data-quality-copy" type="module"></script>
+    <script src="/app.js?v=unified-ratings" type="module"></script>
   </body>
 </html>
