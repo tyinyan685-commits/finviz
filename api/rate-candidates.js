@@ -42,6 +42,21 @@ function bestCoveredRunDate(runs) {
     .sort((a, b) => b[1].size - a[1].size || b[0].localeCompare(a[0]))[0]?.[0] || null;
 }
 
+function daysBefore(date, days) {
+  const value = new Date(`${date}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate() - days);
+  return value.toISOString().slice(0, 10);
+}
+
+function fillCandidates(primary, fallback, limit) {
+  const selected = new Map(primary.slice(0, limit).map((candidate) => [candidate.symbol, candidate]));
+  for (const candidate of fallback) {
+    if (selected.size >= limit) break;
+    if (!selected.has(candidate.symbol)) selected.set(candidate.symbol, candidate);
+  }
+  return Array.from(selected.values());
+}
+
 async function loadRating(symbol) {
   const base = (process.env.RATING_API_BASE || DEFAULT_RATING_API_BASE).replace(/\/$/, "");
   const response = await fetch(`${base}/api/rating?symbol=${encodeURIComponent(symbol)}`, {
@@ -110,7 +125,21 @@ export default async function handler(request, response) {
         order: "score.desc"
       }
     });
-    const candidates = groupCandidates(rows).slice(0, limit);
+    const currentCandidates = groupCandidates(rows);
+    let candidates = currentCandidates.slice(0, limit);
+    if (candidates.length < limit) {
+      const recentRows = await supabaseRequest("/radar_candidates", {
+        params: {
+          select: "symbol,name,preset_id,score",
+          run_date: `gte.${daysBefore(runDate, 30)}`,
+          and: `(run_date.lte.${runDate})`,
+          order: "run_date.desc,score.desc",
+          limit: 1000
+        }
+      });
+      candidates = fillCandidates(currentCandidates, groupCandidates(recentRows), limit);
+    }
+    const historicalFill = Math.max(0, candidates.length - Math.min(currentCandidates.length, limit));
     const errors = [];
     const completed = await mapConcurrent(candidates, 5, async (candidate) => {
       try {
@@ -133,6 +162,8 @@ export default async function handler(request, response) {
       ok: true,
       runDate,
       presetCoverage: new Set(latestRuns.filter((run) => run.run_date === runDate).map((run) => run.preset_id)).size,
+      latestSnapshotCandidates: currentCandidates.length,
+      historicalFill,
       requested: candidates.length,
       saved: ratingRows.length,
       failed: errors.length,
