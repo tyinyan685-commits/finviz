@@ -347,7 +347,7 @@ async function loadEarningsWatch(limit) {
     }
   }
   calendar = Array.isArray(calendar) ? calendar : [];
-  const symbols = [...new Set(calendar.map((row) => row.symbol).filter(Boolean))].slice(0, Math.max(limit * 4, 120));
+  const symbols = [...new Set(calendar.map((row) => row.symbol).filter(Boolean))];
   const quotes = await quoteSymbols(symbols);
   const quoteMap = new Map(quotes.map((quote) => [quote.symbol, quote]));
   const stocks = calendar
