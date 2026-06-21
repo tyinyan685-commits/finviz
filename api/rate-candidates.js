@@ -57,6 +57,19 @@ function fillCandidates(primary, fallback, limit) {
   return Array.from(selected.values());
 }
 
+function passesCurrentQualityRules(row) {
+  if (row.preset_id === "unusual_volume") {
+    return row.metrics?.technicalReady === true && Number(row.relative_volume) > 1.15;
+  }
+  if (row.preset_id === "earnings_watch") {
+    return Boolean(
+      row.metrics?.earningsDate ||
+      (Array.isArray(row.reasons) && row.reasons.some((reason) => String(reason).startsWith("财报日 ")))
+    );
+  }
+  return true;
+}
+
 async function loadRating(symbol) {
   const base = (process.env.RATING_API_BASE || DEFAULT_RATING_API_BASE).replace(/\/$/, "");
   const response = await fetch(`${base}/api/rating?symbol=${encodeURIComponent(symbol)}`, {
@@ -120,24 +133,28 @@ export default async function handler(request, response) {
 
     const rows = await supabaseRequest("/radar_candidates", {
       params: {
-        select: "symbol,name,preset_id,score",
+        select: "symbol,name,preset_id,score,relative_volume,reasons,metrics",
         run_date: `eq.${runDate}`,
         order: "score.desc"
       }
     });
-    const currentCandidates = groupCandidates(rows);
+    const currentCandidates = groupCandidates(rows.filter(passesCurrentQualityRules));
     let candidates = currentCandidates.slice(0, limit);
     if (candidates.length < limit) {
       const recentRows = await supabaseRequest("/radar_candidates", {
         params: {
-          select: "symbol,name,preset_id,score",
+          select: "symbol,name,preset_id,score,relative_volume,reasons,metrics",
           run_date: `gte.${daysBefore(runDate, 30)}`,
           and: `(run_date.lte.${runDate})`,
           order: "run_date.desc,score.desc",
           limit: 1000
         }
       });
-      candidates = fillCandidates(currentCandidates, groupCandidates(recentRows), limit);
+      candidates = fillCandidates(
+        currentCandidates,
+        groupCandidates(recentRows.filter(passesCurrentQualityRules)),
+        limit
+      );
     }
     const historicalFill = Math.max(0, candidates.length - Math.min(currentCandidates.length, limit));
     const errors = [];
