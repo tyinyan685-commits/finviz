@@ -199,6 +199,15 @@ export default async function handler(request, response) {
               }
             }
           : candidate;
+      })
+      .sort((a, b) => {
+        const aScore = Number(a.rating?.score);
+        const bScore = Number(b.rating?.score);
+        const aRated = Number.isFinite(aScore);
+        const bRated = Number.isFinite(bScore);
+        if (aRated !== bRated) return bRated - aRated;
+        if (aRated && bScore !== aScore) return bScore - aScore;
+        return 0;
       });
     const candidates = summarizedCandidates.slice(0, limit);
     response.status(200).json({

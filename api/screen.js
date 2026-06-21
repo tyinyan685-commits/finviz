@@ -270,6 +270,7 @@ function technicalLimitForPreset(presetId, limit) {
   const requested = Math.max(20, limit * 2);
   if (presetId === "quality_growth") return Math.min(40, requested);
   if (presetId === "unusual_volume") return Math.min(120, Math.max(90, requested));
+  if (presetId === "earnings_watch") return Math.min(70, Math.max(40, requested));
   return Math.min(70, requested);
 }
 
@@ -430,13 +431,11 @@ export async function runScreen({ presetId, limit: requestedLimit, refresh = fal
   }
 
   const prefilteredStocks = prefilterBeforeTechnical(preset.id, baseStocks);
-  if (preset.id !== "earnings_watch") {
-    baseStocks = await enrichStocksWithTechnical(
-      prefilteredStocks.length ? prefilteredStocks : baseStocks,
-      technicalLimitForPreset(preset.id, limit),
-      8
-    );
-  }
+  baseStocks = await enrichStocksWithTechnical(
+    prefilteredStocks.length ? prefilteredStocks : baseStocks,
+    technicalLimitForPreset(preset.id, limit),
+    8
+  );
   if (preset.id === "quality_growth") {
     baseStocks = await enrichStocksWithFundamentals(baseStocks, fundamentalLimitForScreen(limit), 6);
   }
@@ -474,7 +473,7 @@ export async function runScreen({ presetId, limit: requestedLimit, refresh = fal
     generatedAt: new Date().toISOString(),
     dataQuality: {
       technicalReady: stocks.filter((stock) => stock.technicalReady).length,
-      technicalApplicable: preset.id !== "earnings_watch",
+      technicalApplicable: true,
       fundamentalReady: stocks.filter((stock) => stock.fundamentalReady).length,
       total: stocks.length,
       pipeline: {
