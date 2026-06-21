@@ -234,7 +234,7 @@ function renderStocks(data) {
 
 function renderHistory(data) {
   const latestPresets = data.runSummary?.latestPresetIds || [];
-  $("history-meta").textContent = `近 ${data.days} 天数据库共有 ${data.totalRows} 条雷达命中；其中 ${data.aggregationRows ?? data.totalRows} 条属于截至最新完整快照的统计范围，聚合为 ${data.uniqueCandidates ?? "n/a"} 只去重候选；当前展示 ${data.displayedCandidates ?? (data.candidates || []).length} 只；最新完整快照 ${
+  $("history-meta").textContent = `近 ${data.days} 天数据库共有 ${data.totalRows} 条旧新命中记录；按当前质量规则并截至最新完整快照，采用 ${data.aggregationRows ?? data.totalRows} 条，排除 ${data.excludedRows ?? 0} 条旧版无效或未纳入记录；聚合为 ${data.uniqueCandidates ?? "n/a"} 只去重候选，当前展示 ${data.displayedCandidates ?? (data.candidates || []).length} 只；最新完整快照 ${
     data.runSummary?.latestRunDate || "n/a"
   }；覆盖雷达 ${latestPresets.length ? latestPresets.join(", ") : "n/a"}`;
   renderHistoryCoverage(data);

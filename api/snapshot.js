@@ -59,7 +59,8 @@ function candidateRow(run, stock, index) {
       distance50: stock.distance50 ?? null,
       distance200: stock.distance200 ?? null,
       rsi14: stock.rsi14 ?? null,
-      distanceFromHigh52Week: stock.distanceFromHigh52Week ?? null
+      distanceFromHigh52Week: stock.distanceFromHigh52Week ?? null,
+      earningsDate: stock.earningsDate ?? null
     }
   };
 }

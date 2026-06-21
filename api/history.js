@@ -122,6 +122,19 @@ function summarize(rows, latestRunDate) {
     });
 }
 
+function passesCurrentQualityRules(row) {
+  if (row.preset_id === "unusual_volume") {
+    return row.metrics?.technicalReady === true && Number(row.relative_volume) > 1.15;
+  }
+  if (row.preset_id === "earnings_watch") {
+    return Boolean(
+      row.metrics?.earningsDate ||
+      (Array.isArray(row.reasons) && row.reasons.some((reason) => String(reason).startsWith("财报日 ")))
+    );
+  }
+  return true;
+}
+
 export default async function handler(request, response) {
   try {
     const days = Math.max(1, Math.min(120, Number(request.query.days || 30)));
@@ -161,7 +174,11 @@ export default async function handler(request, response) {
     eligibleRatings.forEach((rating) => {
       if (!latestRatingBySymbol.has(rating.symbol)) latestRatingBySymbol.set(rating.symbol, rating);
     });
-    const eligibleRows = rows.filter((row) => !runSummary.latestRunDate || row.run_date <= runSummary.latestRunDate);
+    const eligibleRows = rows.filter(
+      (row) =>
+        (!runSummary.latestRunDate || row.run_date <= runSummary.latestRunDate) &&
+        passesCurrentQualityRules(row)
+    );
     const summarizedCandidates = summarize(eligibleRows, runSummary.latestRunDate)
       .map((candidate) => {
         const rating = latestRatingBySymbol.get(candidate.symbol);
@@ -190,6 +207,7 @@ export default async function handler(request, response) {
       generatedAt: new Date().toISOString(),
       totalRows: rows.length,
       aggregationRows: eligibleRows.length,
+      excludedRows: rows.length - eligibleRows.length,
       uniqueCandidates: summarizedCandidates.length,
       displayedCandidates: candidates.length,
       ratingRows: eligibleRatings.length,
