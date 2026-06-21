@@ -158,7 +158,7 @@ export default async function handler(request, response) {
       });
     }
 
-    return response.status(200).json({
+    const result = {
       ok: true,
       runDate,
       presetCoverage: new Set(latestRuns.filter((run) => run.run_date === runDate).map((run) => run.preset_id)).size,
@@ -168,7 +168,9 @@ export default async function handler(request, response) {
       saved: ratingRows.length,
       failed: errors.length,
       errors
-    });
+    };
+    console.info("[rating-sync]", JSON.stringify(result));
+    return response.status(200).json(result);
   } catch (error) {
     return response.status(error.statusCode || 500).json({ ok: false, error: error.message || "Unknown error" });
   }
