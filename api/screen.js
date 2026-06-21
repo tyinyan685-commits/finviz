@@ -348,17 +348,34 @@ async function loadEarningsWatch(limit) {
   }
   calendar = Array.isArray(calendar) ? calendar : [];
   const symbols = [...new Set(calendar.map((row) => row.symbol).filter(Boolean))];
-  const quotes = await quoteSymbols(symbols);
-  const quoteMap = new Map(quotes.map((quote) => [quote.symbol, quote]));
-  const stocks = calendar
-    .map((row) => normalizeStock({ symbol: row.symbol, earningsDate: row.date }, quoteMap.get(row.symbol)))
+  const calendarBySymbol = new Map(calendar.map((row) => [String(row.symbol || "").toUpperCase(), row]));
+  let screenerRows = [];
+  try {
+    screenerRows = await fmpGet("/company-screener", {
+      marketCapMoreThan: 2_000_000_000,
+      marketCapLowerThan: 300_000_000_000,
+      volumeMoreThan: 500_000,
+      priceMoreThan: 10,
+      isActivelyTrading: true,
+      limit: 10_000
+    });
+  } catch (error) {
+    errors.push(`screener: ${error.message}`);
+  }
+  screenerRows = Array.isArray(screenerRows) ? screenerRows : [];
+  const matchedRows = screenerRows.filter((row) => calendarBySymbol.has(String(row.symbol || "").toUpperCase()));
+  const stocks = matchedRows
+    .map((row) => {
+      const event = calendarBySymbol.get(String(row.symbol || "").toUpperCase());
+      return normalizeStock({ ...row, earningsDate: event?.date || null });
+    })
     .filter(
       (stock) =>
         stock.symbol &&
         stock.earningsDate &&
         isCommonStock({}, stock) &&
         (stock.price ?? 0) > 10 &&
-        (stock.volume ?? 0) > 500_000 &&
+        (stock.volume === null || stock.volume > 500_000) &&
         (stock.marketCap ?? 0) > 2_000_000_000 &&
         (stock.marketCap ?? 0) < 300_000_000_000
     );
@@ -371,7 +388,8 @@ async function loadEarningsWatch(limit) {
       calendarRows: calendar.length,
       calendarSymbols: symbols.length,
       sampleSymbols: symbols.slice(0, 8),
-      quotedSymbols: quoteMap.size,
+      screenerRows: screenerRows.length,
+      calendarMatches: matchedRows.length,
       errors
     }
   };
