@@ -1,4 +1,4 @@
-import { fmpGet, fmpV3Get, optional, safeNumber } from "./_lib/fmp.js";
+import { fmpGet, fmpV3Get, safeNumber } from "./_lib/fmp.js";
 import { enrichStocksWithFundamentals } from "./_lib/fundamentals.js";
 import { getPreset } from "./_lib/presets.js";
 import { scoreStock } from "./_lib/scoring.js";
@@ -250,7 +250,15 @@ function prefilterBeforeTechnical(presetId, stocks) {
     );
   }
   if (presetId === "unusual_volume") {
-    return stocks.filter((stock) => (stock.marketCap ?? 0) < 300_000_000_000 && (stock.volume ?? 0) > 1_000_000);
+    return stocks
+      .filter(
+        (stock) =>
+          (stock.marketCap ?? 0) < 50_000_000_000 &&
+          (stock.marketCap ?? 0) > 500_000_000 &&
+          (stock.volume ?? 0) > 1_000_000 &&
+          (stock.price ?? 0) > 5
+      )
+      .sort((a, b) => (b.relativeVolume ?? 0) - (a.relativeVolume ?? 0));
   }
   if (presetId === "earnings_watch") {
     return stocks.filter((stock) => (stock.marketCap ?? 0) < 300_000_000_000);
@@ -261,7 +269,7 @@ function prefilterBeforeTechnical(presetId, stocks) {
 function technicalLimitForPreset(presetId, limit) {
   const requested = Math.max(20, limit * 2);
   if (presetId === "quality_growth") return Math.min(40, requested);
-  if (presetId === "unusual_volume") return Math.min(90, requested);
+  if (presetId === "unusual_volume") return Math.min(120, Math.max(90, requested));
   return Math.min(70, requested);
 }
 
@@ -310,19 +318,52 @@ async function quoteSymbols(symbols) {
 }
 
 async function loadEarningsWatch(limit) {
-  const calendar = await optional(
-    fmpGet("/earnings-calendar", {
-      from: today(0),
-      to: today(14)
-    }),
-    []
-  );
+  const from = today(0);
+  const to = today(21);
+  let calendar = [];
+  let source = "FMP stable earnings-calendar";
+  const errors = [];
+  try {
+    calendar = await fmpGet("/earnings-calendar", { from, to });
+  } catch (error) {
+    errors.push(`stable: ${error.message}`);
+  }
+  if (!Array.isArray(calendar) || !calendar.length) {
+    source = "FMP v3 earning_calendar";
+    try {
+      calendar = await fmpV3Get("/earning_calendar", { from, to });
+    } catch (error) {
+      errors.push(`v3: ${error.message}`);
+      calendar = [];
+    }
+  }
+  calendar = Array.isArray(calendar) ? calendar : [];
   const symbols = [...new Set(calendar.map((row) => row.symbol).filter(Boolean))].slice(0, Math.max(limit * 4, 120));
   const quotes = await quoteSymbols(symbols);
   const quoteMap = new Map(quotes.map((quote) => [quote.symbol, quote]));
-  return calendar
+  const stocks = calendar
     .map((row) => normalizeStock({ symbol: row.symbol, earningsDate: row.date }, quoteMap.get(row.symbol)))
-    .filter((stock) => stock.symbol && stock.price && stock.marketCap && stock.marketCap > 500_000_000);
+    .filter(
+      (stock) =>
+        stock.symbol &&
+        stock.earningsDate &&
+        isCommonStock({}, stock) &&
+        (stock.price ?? 0) > 10 &&
+        (stock.volume ?? 0) > 500_000 &&
+        (stock.marketCap ?? 0) > 2_000_000_000 &&
+        (stock.marketCap ?? 0) < 300_000_000_000
+    );
+  return {
+    stocks,
+    meta: {
+      from,
+      to,
+      source,
+      calendarRows: calendar.length,
+      quotedSymbols: quoteMap.size,
+      errors
+    }
+  };
 }
 
 export async function runScreen({ presetId, limit: requestedLimit, refresh = false } = {}) {
@@ -352,16 +393,21 @@ export async function runScreen({ presetId, limit: requestedLimit, refresh = fal
     .map((row) => normalizeStock(row, quoteMap.get(row.symbol)))
     .filter((stock) => stock.symbol && stock.price && isCommonStock(rowFromStock(stock), stock));
 
+  let earningsMeta = null;
   if (preset.id === "earnings_watch") {
-    baseStocks = await loadEarningsWatch(limit);
+    const earningsResult = await loadEarningsWatch(limit);
+    baseStocks = earningsResult.stocks;
+    earningsMeta = earningsResult.meta;
   }
 
   const prefilteredStocks = prefilterBeforeTechnical(preset.id, baseStocks);
-  baseStocks = await enrichStocksWithTechnical(
-    prefilteredStocks.length ? prefilteredStocks : baseStocks,
-    technicalLimitForPreset(preset.id, limit),
-    8
-  );
+  if (preset.id !== "earnings_watch") {
+    baseStocks = await enrichStocksWithTechnical(
+      prefilteredStocks.length ? prefilteredStocks : baseStocks,
+      technicalLimitForPreset(preset.id, limit),
+      8
+    );
+  }
   if (preset.id === "quality_growth") {
     baseStocks = await enrichStocksWithFundamentals(baseStocks, fundamentalLimitForScreen(limit), 6);
   }
@@ -381,13 +427,35 @@ export async function runScreen({ presetId, limit: requestedLimit, refresh = fal
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 
+  const technicalReadyCount = baseStocks.filter((stock) => stock.technicalReady).length;
+  const emptyReason = stocks.length
+    ? null
+    : preset.id === "earnings_watch"
+      ? earningsMeta?.calendarRows
+        ? `未来21天日历返回 ${earningsMeta.calendarRows} 条，但没有股票同时满足价格、成交量和市值条件。`
+        : earningsMeta?.errors?.length
+          ? `FMP 财报日历暂不可用：${earningsMeta.errors.join("；")}`
+          : "FMP 在未来21天没有返回符合条件的财报事件；未使用普通股票补位。"
+      : preset.id === "unusual_volume"
+        ? `基础池 ${raw.length} 只，市值/流动性预筛 ${prefilteredStocks.length} 只，取得真实技术数据 ${technicalReadyCount} 只；本次没有股票满足 RVOL > 1.15。`
+        : "本次没有股票满足该雷达的全部必需条件。";
+
   const payload = {
     preset,
     generatedAt: new Date().toISOString(),
     dataQuality: {
       technicalReady: stocks.filter((stock) => stock.technicalReady).length,
+      technicalApplicable: preset.id !== "earnings_watch",
       fundamentalReady: stocks.filter((stock) => stock.fundamentalReady).length,
       total: stocks.length,
+      pipeline: {
+        raw: raw.length,
+        prefiltered: prefilteredStocks.length,
+        technicalReady: technicalReadyCount,
+        matched: stocks.length,
+        earnings: earningsMeta
+      },
+      emptyReason,
       cached: false,
       cacheTtlSeconds: Math.round(SCREEN_CACHE_TTL_MS / 1000),
       note: "仅展示满足全部必需条件的股票；技术指标来自 FMP 历史价格自行计算（至少50条有效收盘价），基本面来自 FMP key metrics 和年度财报。缺失数据不会按命中处理。"

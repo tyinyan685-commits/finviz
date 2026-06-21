@@ -22,7 +22,7 @@ const presetLogic = {
   },
   earnings_watch: {
     title: "财报观察逻辑",
-    text: "仅使用 FMP earnings-calendar 返回的未来 14 天财报日期，并要求市值和流动性合格。日历没有返回日期时不会用季度规律猜测，也不会用普通股票池补位；该雷达只用于排程和风险提醒。"
+    text: "优先使用 FMP stable earnings-calendar，并在其为空或不可用时尝试 v3 earning_calendar；范围为未来 21 天，同时要求股价大于 10 美元、成交量大于 50 万、市值 20亿-3000 亿美元。两个日历都没有可靠事件时保持空白，不猜日期，也不用普通股票补位。"
   }
 };
 
@@ -167,7 +167,13 @@ function renderScreenLogic(preset) {
 
 function dataQualityText(dataQuality) {
   if (!dataQuality) return "";
-  const technical = `技术面覆盖：${dataQuality.technicalReady}/${dataQuality.total}`;
+  if (!dataQuality.total) {
+    const cache = dataQuality.cached ? `；缓存 ${dataQuality.cacheAgeSeconds || 0}s` : "";
+    return `${dataQuality.emptyReason || "本次没有股票满足全部必需条件"}${cache}`;
+  }
+  const technical = dataQuality.technicalApplicable === false
+    ? "技术面：该雷达不读取"
+    : `技术面覆盖：${dataQuality.technicalReady}/${dataQuality.total}`;
   const fundamentalReady = Number(dataQuality.fundamentalReady || 0);
   const fundamental =
     fundamentalReady > 0
@@ -204,9 +210,10 @@ function renderStocks(data) {
   renderCounts(data.stocks);
   renderSectorChips(data.stocks);
 
-  $("stock-table").innerHTML = data.stocks
-    .slice(0, 40)
-    .map(
+  $("stock-table").innerHTML = data.stocks.length
+    ? data.stocks
+      .slice(0, 40)
+      .map(
       (stock, index) => `
         <tr class="${selectedSymbol === stock.symbol ? "selected" : ""}">
           <td>${index + 1}</td>
@@ -220,13 +227,14 @@ function renderStocks(data) {
           <td><div class="score"><span style="width:${stock.score}%"></span></div>${stock.score}</td>
         </tr>
       `
-    )
-    .join("");
+      )
+      .join("")
+    : `<tr><td colspan="9"><strong>本次没有命中</strong><span>${data.dataQuality?.emptyReason || "没有股票满足全部必需条件。"}</span></td></tr>`;
 }
 
 function renderHistory(data) {
   const latestPresets = data.runSummary?.latestPresetIds || [];
-  $("history-meta").textContent = `近 ${data.days} 天；原始记录 ${data.totalRows} 条；最新快照 ${
+  $("history-meta").textContent = `近 ${data.days} 天数据库共有 ${data.totalRows} 条雷达命中；其中 ${data.aggregationRows ?? data.totalRows} 条属于截至最新完整快照的统计范围，聚合为 ${data.uniqueCandidates ?? "n/a"} 只去重候选；当前展示 ${data.displayedCandidates ?? (data.candidates || []).length} 只；最新完整快照 ${
     data.runSummary?.latestRunDate || "n/a"
   }；覆盖雷达 ${latestPresets.length ? latestPresets.join(", ") : "n/a"}`;
   renderHistoryCoverage(data);

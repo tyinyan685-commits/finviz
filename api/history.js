@@ -162,7 +162,7 @@ export default async function handler(request, response) {
       if (!latestRatingBySymbol.has(rating.symbol)) latestRatingBySymbol.set(rating.symbol, rating);
     });
     const eligibleRows = rows.filter((row) => !runSummary.latestRunDate || row.run_date <= runSummary.latestRunDate);
-    const candidates = summarize(eligibleRows, runSummary.latestRunDate)
+    const summarizedCandidates = summarize(eligibleRows, runSummary.latestRunDate)
       .map((candidate) => {
         const rating = latestRatingBySymbol.get(candidate.symbol);
         return rating
@@ -182,13 +182,16 @@ export default async function handler(request, response) {
               }
             }
           : candidate;
-      })
-      .slice(0, limit);
+      });
+    const candidates = summarizedCandidates.slice(0, limit);
     response.status(200).json({
       ok: true,
       days,
       generatedAt: new Date().toISOString(),
       totalRows: rows.length,
+      aggregationRows: eligibleRows.length,
+      uniqueCandidates: summarizedCandidates.length,
+      displayedCandidates: candidates.length,
       ratingRows: eligibleRatings.length,
       runSummary,
       candidates
