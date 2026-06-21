@@ -301,16 +301,25 @@ function setCachedScreen(key, data) {
 async function quoteSymbols(symbols) {
   if (!symbols.length) return [];
   const chunks = [];
-  for (let index = 0; index < symbols.length; index += 80) {
-    chunks.push(symbols.slice(index, index + 80));
+  for (let index = 0; index < symbols.length; index += 40) {
+    chunks.push(symbols.slice(index, index + 40));
   }
   const results = await Promise.all(
     chunks.map(async (chunk) => {
       const symbolList = chunk.join(",");
       try {
-        return await fmpV3Get(`/quote/${symbolList}`);
+        const batch = await fmpGet("/batch-quote", { symbols: symbolList });
+        if (Array.isArray(batch) && batch.length) return batch;
+      } catch {}
+      try {
+        const legacy = await fmpV3Get(`/quote/${symbolList}`);
+        if (Array.isArray(legacy) && legacy.length) return legacy;
+      } catch {}
+      try {
+        const stable = await fmpGet("/quote", { symbol: symbolList });
+        return Array.isArray(stable) ? stable : [];
       } catch {
-        return fmpGet("/quote", { symbol: symbolList });
+        return [];
       }
     })
   );
@@ -360,6 +369,8 @@ async function loadEarningsWatch(limit) {
       to,
       source,
       calendarRows: calendar.length,
+      calendarSymbols: symbols.length,
+      sampleSymbols: symbols.slice(0, 8),
       quotedSymbols: quoteMap.size,
       errors
     }
