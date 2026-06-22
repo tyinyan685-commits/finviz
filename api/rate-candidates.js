@@ -105,7 +105,8 @@ function ratingRow(runDate, candidate, payload) {
         currency: payload.currency || null,
         priceAsOf: payload.sources?.priceAsOf || null,
         capturedAt: generatedAt,
-        modelVersion: rating.modelVersion || null
+        modelVersion: rating.modelVersion || null,
+        researchState: payload.researchState || rating.rating || null
       }
     }
   };

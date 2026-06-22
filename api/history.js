@@ -159,7 +159,7 @@ export default async function handler(request, response) {
       supabaseRequest("/stock_ratings", {
         params: {
           select:
-            "run_date,symbol,score,rating,rating_en,confidence,fundamental_score,technical_score,sentiment_score,model_version,generated_at",
+            "run_date,symbol,score,rating,rating_en,confidence,fundamental_score,technical_score,sentiment_score,model_version,generated_at,metrics",
           run_date: `gte.${since}`,
           order: "run_date.desc,score.desc"
         }
@@ -195,7 +195,9 @@ export default async function handler(request, response) {
                 technicalScore: rating.technical_score,
                 sentimentScore: rating.sentiment_score,
                 modelVersion: rating.model_version,
-                generatedAt: rating.generated_at
+                generatedAt: rating.generated_at,
+                researchState: rating.metrics?.snapshot?.researchState || null,
+                risk: rating.metrics?.risk || null
               }
             }
           : candidate;
