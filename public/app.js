@@ -219,6 +219,12 @@ const backtestDimensions = {
   radar: { label: "按雷达", column: "雷达" }
 };
 
+function backtestGroupLabel(group) {
+  const label = group.label || group.rating || "未分类";
+  if (backtestDimension !== "radar") return label;
+  return presets.find((preset) => preset.id === label)?.name || presetLogic[label]?.title?.replace("逻辑", "") || label;
+}
+
 function scoreChange(change) {
   const number = Number(change);
   if (!Number.isFinite(number) || number === 0) return "";
@@ -240,7 +246,7 @@ function renderBacktest(data) {
   const rows = groups
     .map(
       (group) => `<tr>
-        <td><strong>${group.label || group.rating}</strong><span>${group.snapshots} 个评级快照</span></td>
+        <td><strong>${backtestGroupLabel(group)}</strong><span>${group.snapshots} 个评级快照</span></td>
         <td>${backtestHorizon(group, 5)}</td>
         <td>${backtestHorizon(group, 20)}</td>
         <td>${backtestHorizon(group, 60)}</td>
