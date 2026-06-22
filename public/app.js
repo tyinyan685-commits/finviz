@@ -211,6 +211,12 @@ function backtestHorizon(group, horizon) {
   return `<strong>${result.samples} 个</strong><span>平均 ${signedPct(result.averageReturnPct)} · 超额 ${signedPct(result.averageExcessReturnPct)}</span><span>上涨率 ${pct(result.positiveRatePct)}</span>`;
 }
 
+function scoreChange(change) {
+  const number = Number(change);
+  if (!Number.isFinite(number) || number === 0) return "";
+  return ` · 较上次 ${number > 0 ? "+" : ""}${number}`;
+}
+
 function renderBacktest(data) {
   const collecting = data.status !== "ready";
   setText("backtest-summary", collecting ? "样本积累中" : `${data.maturedFiveDaySamples || 0} 个 5日样本`);
@@ -306,7 +312,7 @@ function renderHistory(data) {
           <td><div class="score"><span style="width:${stock.averageScore || 0}%"></span></div>${stock.averageScore ?? "n/a"}</td>
           <td class="rating-cell">${
             stock.rating
-              ? `<strong>${stock.rating.score ?? "n/a"} · ${stock.rating.researchState || stock.rating.label || "待判断"}</strong><span>优先级 ${stock.rating.label || "待判断"} · 风险 ${stock.rating.risk?.level || "待评估"} · 指标完整度 ${stock.rating.confidence ?? 0}%</span>`
+              ? `<strong>${stock.rating.score ?? "n/a"} · ${stock.rating.researchState || stock.rating.label || "待判断"}</strong><span>优先级 ${stock.rating.label || "待判断"} · 风险 ${stock.rating.risk?.level || "待评估"} · 指标完整度 ${stock.rating.confidence ?? 0}%${scoreChange(stock.rating.change?.score)}</span>`
               : '<strong>等待评级</strong><span>每日雷达完成后自动生成</span>'
           }</td>
           <td>${stock.latestDate || "n/a"}<span>${money(stock.latestMarketCap)}</span></td>

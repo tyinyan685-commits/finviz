@@ -171,8 +171,14 @@ export default async function handler(request, response) {
       (rating) => !runSummary.latestRunDate || rating.run_date <= runSummary.latestRunDate
     );
     const latestRatingBySymbol = new Map();
+    const previousRatingBySymbol = new Map();
     eligibleRatings.forEach((rating) => {
-      if (!latestRatingBySymbol.has(rating.symbol)) latestRatingBySymbol.set(rating.symbol, rating);
+      const latest = latestRatingBySymbol.get(rating.symbol);
+      if (!latest) {
+        latestRatingBySymbol.set(rating.symbol, rating);
+      } else if (!previousRatingBySymbol.has(rating.symbol) && rating.run_date < latest.run_date) {
+        previousRatingBySymbol.set(rating.symbol, rating);
+      }
     });
     const eligibleRows = rows.filter(
       (row) =>
@@ -182,6 +188,14 @@ export default async function handler(request, response) {
     const summarizedCandidates = summarize(eligibleRows, runSummary.latestRunDate)
       .map((candidate) => {
         const rating = latestRatingBySymbol.get(candidate.symbol);
+        const previousRating = previousRatingBySymbol.get(candidate.symbol);
+        const difference = (current, previous) => {
+          const currentNumber = Number(current);
+          const previousNumber = Number(previous);
+          return Number.isFinite(currentNumber) && Number.isFinite(previousNumber)
+            ? currentNumber - previousNumber
+            : null;
+        };
         return rating
           ? {
               ...candidate,
@@ -197,7 +211,16 @@ export default async function handler(request, response) {
                 modelVersion: rating.model_version,
                 generatedAt: rating.generated_at,
                 researchState: rating.metrics?.snapshot?.researchState || null,
-                risk: rating.metrics?.risk || null
+                risk: rating.metrics?.risk || null,
+                change: previousRating
+                  ? {
+                      previousRunDate: previousRating.run_date,
+                      score: difference(rating.score, previousRating.score),
+                      fundamental: difference(rating.fundamental_score, previousRating.fundamental_score),
+                      technical: difference(rating.technical_score, previousRating.technical_score),
+                      expectation: difference(rating.sentiment_score, previousRating.sentiment_score)
+                    }
+                  : null
               }
             }
           : candidate;
