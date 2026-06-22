@@ -198,13 +198,25 @@ function renderHistoryCoverage(data) {
   const total = presets.length || latestPresetIds.size;
   const covered = latestPresetIds.size;
   const complete = total > 0 && covered >= total;
+  const automation = data.automationStatus || {};
+  const ratingHealthy = automation.status === "healthy";
+  const ratingTime = automation.latestGeneratedAt ? new Date(automation.latestGeneratedAt).toLocaleString() : "尚未生成";
 
   $("history-coverage").innerHTML = `
-    <div>
-      <strong>快照覆盖 ${covered}/${total}</strong>
-      <span>${complete ? "最新快照已覆盖全部雷达。" : `暂缺：${missingPresets.map((preset) => preset.name).join("、") || "无"}`}</span>
+    <div class="coverage-row">
+      <div>
+        <strong>雷达快照 ${covered}/${total}</strong>
+        <span>${complete ? `最新完整快照 ${data.runSummary?.latestRunDate || "n/a"}` : `暂缺：${missingPresets.map((preset) => preset.name).join("、") || "无"}`}</span>
+      </div>
+      <span class="badge ${complete ? "green-badge" : "warn-badge"}">${complete ? "完整" : "等待快照"}</span>
     </div>
-    <span class="badge ${complete ? "green-badge" : "warn-badge"}">${complete ? "完整" : "等待快照"}</span>
+    <div class="coverage-row">
+      <div>
+        <strong>自动评级 ${automation.currentRatingCount ?? 0}/${automation.expectedRatings ?? 0}</strong>
+        <span>${escapeHtml(automation.message || "等待自动任务状态")} 最近评级：${ratingTime}</span>
+      </div>
+      <span class="badge ${ratingHealthy ? "green-badge" : "warn-badge"}">${escapeHtml(automation.label || "等待")}</span>
+    </div>
   `;
 }
 

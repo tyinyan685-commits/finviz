@@ -1,6 +1,8 @@
 import { supabaseRequest } from "./_lib/supabase.js";
 import { summarizeRatingChange } from "./_lib/rating-change.js";
 import { CURRENT_RATING_MODEL_VERSION } from "./_lib/rating-contract.js";
+import { summarizeAutomationStatus } from "./_lib/automation-status.js";
+import { presets } from "./_lib/presets.js";
 
 function daysAgo(days) {
   return new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
@@ -225,6 +227,12 @@ export default async function handler(request, response) {
         return 0;
       });
     const candidates = summarizedCandidates.slice(0, limit);
+    const automationStatus = summarizeAutomationStatus({
+      runSummary,
+      ratings: eligibleRatings,
+      candidateCount: summarizedCandidates.length,
+      expectedPresetCount: presets.length
+    });
     response.status(200).json({
       ok: true,
       days,
@@ -236,6 +244,7 @@ export default async function handler(request, response) {
       displayedCandidates: candidates.length,
       ratingRows: eligibleRatings.length,
       runSummary,
+      automationStatus,
       candidates
     });
   } catch (error) {

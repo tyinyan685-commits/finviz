@@ -215,9 +215,7 @@ h3 { margin-top: 18px; font-size: 13px; }
 .translation-box strong { font-size: 13px; }
 .translation-box p { color: var(--muted); line-height: 1.55; }
 .coverage-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
   gap: 12px;
   margin-bottom: 14px;
   padding: 10px 12px;
@@ -225,7 +223,9 @@ h3 { margin-top: 18px; font-size: 13px; }
   border-radius: 8px;
   background: #fffdfa;
 }
+.coverage-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .coverage-box div { display: grid; gap: 4px; }
+.coverage-box .coverage-row { display: flex; }
 .coverage-box strong { font-size: 13px; }
 .coverage-box span { color: var(--muted); font-size: 12px; line-height: 1.5; }
 .chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
