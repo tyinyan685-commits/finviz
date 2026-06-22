@@ -19,6 +19,16 @@ function eventKey(event) {
 
 export function summarizeRatingChange(current, previous) {
   if (!current || !previous) return null;
+  if (current.model_version && previous.model_version && current.model_version !== previous.model_version) {
+    return {
+      previousRunDate: previous.run_date,
+      score: null,
+      fundamental: null,
+      technical: null,
+      expectation: null,
+      reasons: [`模型升级：${previous.model_version} → ${current.model_version}，分数暂不直接比较`]
+    };
+  }
   const changes = {
     previousRunDate: previous.run_date,
     score: difference(current.score, previous.score),

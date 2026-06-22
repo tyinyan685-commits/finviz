@@ -352,7 +352,7 @@ function renderHistory(data) {
           <td><div class="score"><span style="width:${stock.averageScore || 0}%"></span></div>${stock.averageScore ?? "n/a"}</td>
           <td class="rating-cell">${
             stock.rating
-              ? `<strong>${stock.rating.score ?? "n/a"} · ${stock.rating.researchState || stock.rating.label || "待判断"}</strong><span>优先级 ${stock.rating.label || "待判断"} · 风险 ${stock.rating.risk?.level || "待评估"} · 指标完整度 ${stock.rating.confidence ?? 0}%${scoreChange(stock.rating.change?.score)}</span>${ratingChangeReasons(stock.rating.change)}`
+              ? `<strong>${stock.rating.score ?? "n/a"} · ${stock.rating.researchState || stock.rating.label || "待判断"}</strong><span>优先级 ${stock.rating.label || "待判断"} · 风险 ${stock.rating.risk?.level || "待评估"} · 指标完整度 ${stock.rating.confidence ?? 0}%${stock.rating.modelCurrent ? "" : " · 旧模型"}${scoreChange(stock.rating.change?.score)}</span>${ratingChangeReasons(stock.rating.change)}`
               : '<strong>等待评级</strong><span>每日雷达完成后自动生成</span>'
           }</td>
           <td>${stock.latestDate || "n/a"}<span>${money(stock.latestMarketCap)}</span></td>

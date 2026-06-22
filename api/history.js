@@ -1,5 +1,6 @@
 import { supabaseRequest } from "./_lib/supabase.js";
 import { summarizeRatingChange } from "./_lib/rating-change.js";
+import { CURRENT_RATING_MODEL_VERSION } from "./_lib/rating-contract.js";
 
 function daysAgo(days) {
   return new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
@@ -190,6 +191,7 @@ export default async function handler(request, response) {
       .map((candidate) => {
         const rating = latestRatingBySymbol.get(candidate.symbol);
         const previousRating = previousRatingBySymbol.get(candidate.symbol);
+        const modelCurrent = rating?.model_version === CURRENT_RATING_MODEL_VERSION;
         return rating
           ? {
               ...candidate,
@@ -203,8 +205,9 @@ export default async function handler(request, response) {
                 technicalScore: rating.technical_score,
                 sentimentScore: rating.sentiment_score,
                 modelVersion: rating.model_version,
+                modelCurrent,
                 generatedAt: rating.generated_at,
-                researchState: rating.metrics?.snapshot?.researchState || null,
+                researchState: modelCurrent ? rating.metrics?.snapshot?.researchState || null : "旧模型待刷新",
                 risk: rating.metrics?.risk || null,
                 change: summarizeRatingChange(rating, previousRating)
               }
@@ -212,6 +215,7 @@ export default async function handler(request, response) {
           : candidate;
       })
       .sort((a, b) => {
+        if (Boolean(a.rating?.modelCurrent) !== Boolean(b.rating?.modelCurrent)) return Number(Boolean(b.rating?.modelCurrent)) - Number(Boolean(a.rating?.modelCurrent));
         const aScore = Number(a.rating?.score);
         const bScore = Number(b.rating?.score);
         const aRated = Number.isFinite(aScore);

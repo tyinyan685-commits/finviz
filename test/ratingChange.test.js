@@ -38,3 +38,12 @@ test("does not compare EPS estimates from different forecast periods", () => {
   );
   assert.equal(change.reasons.some((reason) => reason.startsWith("EPS预测")), false);
 });
+
+test("does not present model upgrades as company score changes", () => {
+  const change = summarizeRatingChange(
+    { run_date: "2026-06-19", model_version: "v5", score: 70 },
+    { run_date: "2026-06-18", model_version: "v4", score: 85 }
+  );
+  assert.equal(change.score, null);
+  assert.match(change.reasons[0], /模型升级/);
+});

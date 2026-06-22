@@ -1,4 +1,5 @@
 import { supabaseRequest } from "./_lib/supabase.js";
+import { validateRatingPayload } from "./_lib/rating-contract.js";
 
 const DEFAULT_RATING_API_BASE = "https://stocks.wiseain.com";
 
@@ -81,7 +82,9 @@ async function loadRating(symbol) {
   });
   const data = await response.json();
   if (!response.ok || !data.ok) throw new Error(data.error || `Rating API failed: ${response.status}`);
-  return data;
+  const validated = validateRatingPayload(data, symbol);
+  if (!validated.ok) throw new Error(validated.error);
+  return validated;
 }
 
 function ratingRow(runDate, candidate, payload) {
