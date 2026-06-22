@@ -105,9 +105,10 @@ function ratingRow(runDate, candidate, payload) {
     metrics: {
       ...(payload.metrics || {}),
       snapshot: {
-        price: payload.price ?? null,
+        price: payload.metrics?.technical?.latest ?? payload.price ?? null,
         currency: payload.currency || null,
         priceAsOf: payload.sources?.priceAsOf || null,
+        priceSource: payload.metrics?.technical?.latest != null ? "FMP historical EOD" : "FMP quote fallback",
         capturedAt: generatedAt,
         modelVersion: rating.modelVersion || null,
         researchState: payload.researchState || rating.rating || null,
