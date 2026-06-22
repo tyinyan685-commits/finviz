@@ -255,6 +255,7 @@ h3 { margin-top: 18px; font-size: 13px; }
   background: #fff2d8;
   color: #9a5a00;
 }
+.rating-change-reasons { color: #526273; line-height: 1.45; }
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
 table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: fixed; }
 .screen-table th:nth-child(1), .screen-table td:nth-child(1) { width: 52px; }

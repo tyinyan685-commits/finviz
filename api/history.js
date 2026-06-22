@@ -1,4 +1,5 @@
 import { supabaseRequest } from "./_lib/supabase.js";
+import { summarizeRatingChange } from "./_lib/rating-change.js";
 
 function daysAgo(days) {
   return new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
@@ -189,13 +190,6 @@ export default async function handler(request, response) {
       .map((candidate) => {
         const rating = latestRatingBySymbol.get(candidate.symbol);
         const previousRating = previousRatingBySymbol.get(candidate.symbol);
-        const difference = (current, previous) => {
-          const currentNumber = Number(current);
-          const previousNumber = Number(previous);
-          return Number.isFinite(currentNumber) && Number.isFinite(previousNumber)
-            ? currentNumber - previousNumber
-            : null;
-        };
         return rating
           ? {
               ...candidate,
@@ -212,15 +206,7 @@ export default async function handler(request, response) {
                 generatedAt: rating.generated_at,
                 researchState: rating.metrics?.snapshot?.researchState || null,
                 risk: rating.metrics?.risk || null,
-                change: previousRating
-                  ? {
-                      previousRunDate: previousRating.run_date,
-                      score: difference(rating.score, previousRating.score),
-                      fundamental: difference(rating.fundamental_score, previousRating.fundamental_score),
-                      technical: difference(rating.technical_score, previousRating.technical_score),
-                      expectation: difference(rating.sentiment_score, previousRating.sentiment_score)
-                    }
-                  : null
+                change: summarizeRatingChange(rating, previousRating)
               }
             }
           : candidate;

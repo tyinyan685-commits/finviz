@@ -43,6 +43,15 @@ function setHtml(id, value) {
   if (element) element.innerHTML = value;
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function summaryUrl(symbol) {
   return `/stock.html?symbol=${encodeURIComponent(symbol)}`;
 }
@@ -231,6 +240,11 @@ function scoreChange(change) {
   return ` · 较上次 ${number > 0 ? "+" : ""}${number}`;
 }
 
+function ratingChangeReasons(change) {
+  if (!change?.reasons?.length) return "";
+  return `<span class="rating-change-reasons">${change.reasons.map(escapeHtml).join("；")}</span>`;
+}
+
 function renderBacktest(data) {
   const collecting = data.status !== "ready";
   setText("backtest-summary", collecting ? "样本积累中" : `${data.maturedFiveDaySamples || 0} 个 5日样本`);
@@ -338,7 +352,7 @@ function renderHistory(data) {
           <td><div class="score"><span style="width:${stock.averageScore || 0}%"></span></div>${stock.averageScore ?? "n/a"}</td>
           <td class="rating-cell">${
             stock.rating
-              ? `<strong>${stock.rating.score ?? "n/a"} · ${stock.rating.researchState || stock.rating.label || "待判断"}</strong><span>优先级 ${stock.rating.label || "待判断"} · 风险 ${stock.rating.risk?.level || "待评估"} · 指标完整度 ${stock.rating.confidence ?? 0}%${scoreChange(stock.rating.change?.score)}</span>`
+              ? `<strong>${stock.rating.score ?? "n/a"} · ${stock.rating.researchState || stock.rating.label || "待判断"}</strong><span>优先级 ${stock.rating.label || "待判断"} · 风险 ${stock.rating.risk?.level || "待评估"} · 指标完整度 ${stock.rating.confidence ?? 0}%${scoreChange(stock.rating.change?.score)}</span>${ratingChangeReasons(stock.rating.change)}`
               : '<strong>等待评级</strong><span>每日雷达完成后自动生成</span>'
           }</td>
           <td>${stock.latestDate || "n/a"}<span>${money(stock.latestMarketCap)}</span></td>
