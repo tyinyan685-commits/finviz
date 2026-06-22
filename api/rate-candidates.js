@@ -82,6 +82,7 @@ async function loadRating(symbol) {
 
 function ratingRow(runDate, candidate, payload) {
   const rating = payload.rating || {};
+  const generatedAt = payload.generatedAt || new Date().toISOString();
   return {
     run_date: runDate,
     symbol: candidate.symbol,
@@ -94,10 +95,19 @@ function ratingRow(runDate, candidate, payload) {
     technical_score: rating.components?.technical?.score ?? null,
     sentiment_score: rating.components?.sentiment?.score ?? null,
     model_version: rating.modelVersion || null,
-    generated_at: payload.generatedAt || new Date().toISOString(),
+    generated_at: generatedAt,
     radar_preset_count: candidate.presets.length,
     radar_presets: candidate.presets,
-    metrics: payload.metrics || {}
+    metrics: {
+      ...(payload.metrics || {}),
+      snapshot: {
+        price: payload.price ?? null,
+        currency: payload.currency || null,
+        priceAsOf: payload.sources?.priceAsOf || null,
+        capturedAt: generatedAt,
+        modelVersion: rating.modelVersion || null
+      }
+    }
   };
 }
 

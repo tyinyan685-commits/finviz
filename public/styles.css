@@ -191,6 +191,15 @@ h3 { margin-top: 18px; font-size: 13px; }
   line-height: 1.55;
 }
 .panel-toggle { margin-bottom: 12px; }
+.summary-meta { margin-left: auto; margin-right: 8px; color: var(--muted); font-weight: 600; }
+.backtest-content { padding: 0 11px 11px; }
+.backtest-content > p { padding: 0 0 9px; }
+.backtest-table-wrap { margin-top: 2px; background: var(--panel); }
+.backtest-table { min-width: 760px; }
+.backtest-table th:first-child, .backtest-table td:first-child { width: 140px; }
+.backtest-table th:last-child, .backtest-table td:last-child { width: 150px; }
+.backtest-table td strong { display: block; }
+.backtest-table td span { margin-top: 3px; }
 .translation-box {
   display: grid;
   gap: 6px;

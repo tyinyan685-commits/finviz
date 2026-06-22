@@ -199,6 +199,59 @@ function renderHistoryCoverage(data) {
   `;
 }
 
+function signedPct(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "n/a";
+  return `${number > 0 ? "+" : ""}${number.toFixed(1)}%`;
+}
+
+function backtestHorizon(group, horizon) {
+  const result = group.horizons?.[horizon];
+  if (!result?.samples) return '<span class="muted">等待样本</span>';
+  return `<strong>${result.samples} 个</strong><span>平均 ${signedPct(result.averageReturnPct)} · 超额 ${signedPct(result.averageExcessReturnPct)}</span><span>上涨率 ${pct(result.positiveRatePct)}</span>`;
+}
+
+function renderBacktest(data) {
+  const collecting = data.status !== "ready";
+  setText("backtest-summary", collecting ? "样本积累中" : `${data.maturedFiveDaySamples || 0} 个 5日样本`);
+  if (collecting) {
+    setHtml(
+      "backtest-content",
+      `<p>${data.message || "等待真实收益样本成熟。"} 已保存 ${data.capturedSnapshots || 0} 个评级价格快照；未到期记录不会生成胜率。</p>`
+    );
+    return;
+  }
+  const rows = (data.groups || [])
+    .map(
+      (group) => `<tr>
+        <td><strong>${group.rating}</strong><span>${group.snapshots} 个评级快照</span></td>
+        <td>${backtestHorizon(group, 5)}</td>
+        <td>${backtestHorizon(group, 20)}</td>
+        <td>${backtestHorizon(group, 60)}</td>
+        <td>${signedPct(group.averageMaxDrawdown20Pct)}</td>
+      </tr>`
+    )
+    .join("");
+  setHtml(
+    "backtest-content",
+    `<p>收益按评级后第 5/20/60 个交易日计算；超额收益以 SPY 为基准。样本太少时只展示，不据此调整模型。</p>
+     <div class="table-wrap backtest-table-wrap"><table class="backtest-table">
+       <thead><tr><th>评级</th><th>5日</th><th>20日</th><th>60日</th><th>20日平均最大回撤</th></tr></thead>
+       <tbody>${rows}</tbody>
+     </table></div>`
+  );
+}
+
+async function loadBacktest() {
+  setText("backtest-summary", "加载中");
+  try {
+    renderBacktest(await getJson("/api/backtest?days=180"));
+  } catch (error) {
+    setText("backtest-summary", "暂不可用");
+    setHtml("backtest-content", `<p>评分验证暂时无法读取：${error.message}</p>`);
+  }
+}
+
 function renderStocks(data) {
   $("screen-title").textContent = data.preset.name;
   $("screen-time").textContent = `生成时间：${new Date(data.generatedAt).toLocaleString()}`;
@@ -289,6 +342,7 @@ async function loadHistory() {
   try {
     const data = await getJson("/api/history?days=30&limit=30");
     renderHistory(data);
+    void loadBacktest();
   } catch (error) {
     setError(error.message);
   } finally {
