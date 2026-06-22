@@ -194,6 +194,9 @@ h3 { margin-top: 18px; font-size: 13px; }
 .summary-meta { margin-left: auto; margin-right: 8px; color: var(--muted); font-weight: 600; }
 .backtest-content { padding: 0 11px 11px; }
 .backtest-content > p { padding: 0 0 9px; }
+.backtest-tabs { display: flex; gap: 4px; margin: 0 0 8px; }
+.backtest-tab { border: 1px solid var(--line); background: var(--panel); color: var(--muted); padding: 5px 9px; border-radius: 5px; cursor: pointer; }
+.backtest-tab.active { color: var(--text); border-color: var(--accent); background: #eefaf7; }
 .backtest-table-wrap { margin-top: 2px; background: var(--panel); }
 .backtest-table { min-width: 760px; }
 .backtest-table th:first-child, .backtest-table td:first-child { width: 140px; }

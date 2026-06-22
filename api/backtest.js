@@ -25,7 +25,7 @@ export default async function handler(request, response) {
     const days = Math.max(30, Math.min(365, Number(request.query.days || 180)));
     const rows = await supabaseRequest("/stock_ratings", {
       params: {
-        select: "run_date,symbol,score,rating,model_version,metrics",
+        select: "run_date,symbol,score,rating,model_version,radar_presets,metrics",
         run_date: `gte.${daysAgo(days)}`,
         order: "run_date.asc,symbol.asc",
         limit: 2000
@@ -39,7 +39,10 @@ export default async function handler(request, response) {
         rating: row.rating,
         modelVersion: row.model_version,
         entryPrice: row.metrics?.snapshot?.price ?? null,
-        priceAsOf: row.metrics?.snapshot?.priceAsOf ?? null
+        priceAsOf: row.metrics?.snapshot?.priceAsOf ?? null,
+        sector: row.metrics?.snapshot?.sector ?? null,
+        industry: row.metrics?.snapshot?.industry ?? null,
+        radars: Array.isArray(row.radar_presets) ? row.radar_presets : []
       }))
       .filter((row) => Number(row.entryPrice) > 0);
 
@@ -64,6 +67,8 @@ export default async function handler(request, response) {
       .map((snapshot) => evaluateRatingSnapshot(snapshot, pricesBySymbol.get(snapshot.symbol) || [], benchmarkRows))
       .filter(Boolean);
     const groups = summarizeEvaluations(evaluations);
+    const sectorGroups = summarizeEvaluations(evaluations, undefined, (evaluation) => evaluation.sector ? [evaluation.sector] : []);
+    const radarGroups = summarizeEvaluations(evaluations, undefined, (evaluation) => evaluation.radars || []);
     const maturedFiveDaySamples = groups.reduce((sum, group) => sum + (group.horizons?.[5]?.samples || 0), 0);
 
     response.setHeader("Cache-Control", "public, s-maxage=21600, stale-while-revalidate=43200");
@@ -77,7 +82,8 @@ export default async function handler(request, response) {
       maturedFiveDaySamples,
       message: maturedFiveDaySamples > 0 ? null : "价格快照已开始保存，等待首批样本满 5 个交易日。",
       groups,
-      dataPolicy: "仅使用评级当日固化价格和之后第 5/20/60 个交易日真实收盘价；旧记录没有入口价格时排除，不进行回填或插值。"
+      breakdowns: { rating: groups, sector: sectorGroups, radar: radarGroups },
+      dataPolicy: "以快照 priceAsOf 对应的真实收盘价为入口，使用之后第 5/20/60 个交易日真实收盘价；旧记录缺少入口价格或分组字段时排除，不进行回填或插值。"
     });
   } catch (error) {
     return response.status(error.statusCode || 500).json({ ok: false, error: error.message || "Backtest failed" });

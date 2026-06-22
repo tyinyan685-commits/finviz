@@ -211,6 +211,14 @@ function backtestHorizon(group, horizon) {
   return `<strong>${result.samples} 个</strong><span>平均 ${signedPct(result.averageReturnPct)} · 超额 ${signedPct(result.averageExcessReturnPct)}</span><span>上涨率 ${pct(result.positiveRatePct)}</span>`;
 }
 
+let backtestDimension = "rating";
+
+const backtestDimensions = {
+  rating: { label: "按评级", column: "评级" },
+  sector: { label: "按行业", column: "行业" },
+  radar: { label: "按雷达", column: "雷达" }
+};
+
 function scoreChange(change) {
   const number = Number(change);
   if (!Number.isFinite(number) || number === 0) return "";
@@ -227,10 +235,12 @@ function renderBacktest(data) {
     );
     return;
   }
-  const rows = (data.groups || [])
+  const dimension = backtestDimensions[backtestDimension] || backtestDimensions.rating;
+  const groups = data.breakdowns?.[backtestDimension] || (backtestDimension === "rating" ? data.groups : []) || [];
+  const rows = groups
     .map(
       (group) => `<tr>
-        <td><strong>${group.rating}</strong><span>${group.snapshots} 个评级快照</span></td>
+        <td><strong>${group.label || group.rating}</strong><span>${group.snapshots} 个评级快照</span></td>
         <td>${backtestHorizon(group, 5)}</td>
         <td>${backtestHorizon(group, 20)}</td>
         <td>${backtestHorizon(group, 60)}</td>
@@ -238,14 +248,24 @@ function renderBacktest(data) {
       </tr>`
     )
     .join("");
+  const tabs = Object.entries(backtestDimensions)
+    .map(([key, item]) => `<button type="button" class="backtest-tab ${key === backtestDimension ? "active" : ""}" data-backtest-dimension="${key}">${item.label}</button>`)
+    .join("");
   setHtml(
     "backtest-content",
     `<p>收益按评级后第 5/20/60 个交易日计算；超额收益以 SPY 为基准。样本太少时只展示，不据此调整模型。</p>
+     <div class="backtest-tabs" aria-label="回测分组">${tabs}</div>
      <div class="table-wrap backtest-table-wrap"><table class="backtest-table">
-       <thead><tr><th>评级</th><th>5日</th><th>20日</th><th>60日</th><th>20日平均最大回撤</th></tr></thead>
-       <tbody>${rows}</tbody>
+       <thead><tr><th>${dimension.column}</th><th>5日</th><th>20日</th><th>60日</th><th>20日平均最大回撤</th></tr></thead>
+       <tbody>${rows || `<tr><td colspan="5"><strong>等待分组样本</strong><span>新快照开始保存该分组字段后自动出现。</span></td></tr>`}</tbody>
      </table></div>`
   );
+  document.querySelectorAll("[data-backtest-dimension]").forEach((button) => {
+    button.addEventListener("click", () => {
+      backtestDimension = button.dataset.backtestDimension;
+      renderBacktest(data);
+    });
+  });
 }
 
 async function loadBacktest() {

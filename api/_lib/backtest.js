@@ -32,8 +32,9 @@ export function evaluateRatingSnapshot(snapshot, priceRows, benchmarkRows, horiz
   const stock = normalizePriceRows(priceRows);
   const benchmark = normalizePriceRows(benchmarkRows);
   const entryPrice = safeNumber(snapshot.entryPrice);
-  const stockIndex = firstIndexOnOrAfter(stock, snapshot.runDate);
-  const benchmarkIndex = firstIndexOnOrAfter(benchmark, snapshot.runDate);
+  const entryDate = snapshot.priceAsOf || snapshot.runDate;
+  const stockIndex = firstIndexOnOrAfter(stock, entryDate);
+  const benchmarkIndex = firstIndexOnOrAfter(benchmark, entryDate);
   if (!(entryPrice > 0) || stockIndex < 0 || benchmarkIndex < 0) return null;
 
   const outcomes = {};
@@ -57,6 +58,7 @@ export function evaluateRatingSnapshot(snapshot, priceRows, benchmarkRows, horiz
 
   return {
     ...snapshot,
+    entryDate,
     outcomes,
     maxDrawdown20Pct: maxDrawdown(entryPrice, stock.slice(stockIndex + 1, stockIndex + 21))
   };
@@ -78,17 +80,24 @@ function rounded(value) {
   return Number.isFinite(value) ? Math.round(value * 100) / 100 : null;
 }
 
-export function summarizeEvaluations(evaluations, horizons = BACKTEST_HORIZONS) {
+export function summarizeEvaluations(
+  evaluations,
+  horizons = BACKTEST_HORIZONS,
+  groupValues = (evaluation) => [evaluation.rating || "未分类"]
+) {
   const groups = new Map();
   for (const evaluation of evaluations.filter(Boolean)) {
-    const key = evaluation.rating || "未分类";
-    const group = groups.get(key) || [];
-    group.push(evaluation);
-    groups.set(key, group);
+    const keys = Array.from(new Set((groupValues(evaluation) || []).filter(Boolean)));
+    for (const key of keys) {
+      const group = groups.get(key) || [];
+      group.push(evaluation);
+      groups.set(key, group);
+    }
   }
 
-  return Array.from(groups.entries()).map(([rating, samples]) => ({
-    rating,
+  return Array.from(groups.entries()).map(([label, samples]) => ({
+    label,
+    rating: label,
     snapshots: samples.length,
     averageScore: rounded(average(samples.map((sample) => Number(sample.score)))),
     averageMaxDrawdown20Pct: rounded(average(samples.map((sample) => sample.maxDrawdown20Pct))),

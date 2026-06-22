@@ -19,10 +19,14 @@ function groupCandidates(rows) {
     const current = grouped.get(row.symbol) || {
       symbol: row.symbol,
       name: row.name,
+      sector: row.sector || null,
+      industry: row.industry || null,
       presets: new Set(),
       radarScore: 0
     };
     current.presets.add(row.preset_id);
+    current.sector ||= row.sector || null;
+    current.industry ||= row.industry || null;
     current.radarScore = Math.max(current.radarScore, Number(row.score) || 0);
     grouped.set(row.symbol, current);
   }
@@ -106,7 +110,10 @@ function ratingRow(runDate, candidate, payload) {
         priceAsOf: payload.sources?.priceAsOf || null,
         capturedAt: generatedAt,
         modelVersion: rating.modelVersion || null,
-        researchState: payload.researchState || rating.rating || null
+        researchState: payload.researchState || rating.rating || null,
+        sector: candidate.sector || null,
+        industry: candidate.industry || null,
+        radars: candidate.presets
       }
     }
   };
@@ -144,7 +151,7 @@ export default async function handler(request, response) {
 
     const rows = await supabaseRequest("/radar_candidates", {
       params: {
-        select: "symbol,name,preset_id,score,relative_volume,reasons,metrics",
+        select: "symbol,name,sector,industry,preset_id,score,relative_volume,reasons,metrics",
         run_date: `eq.${runDate}`,
         order: "score.desc"
       }
@@ -154,7 +161,7 @@ export default async function handler(request, response) {
     if (candidates.length < limit) {
       const recentRows = await supabaseRequest("/radar_candidates", {
         params: {
-          select: "symbol,name,preset_id,score,relative_volume,reasons,metrics",
+          select: "symbol,name,sector,industry,preset_id,score,relative_volume,reasons,metrics",
           run_date: `gte.${daysBefore(runDate, 30)}`,
           and: `(run_date.lte.${runDate})`,
           order: "run_date.desc,score.desc",
