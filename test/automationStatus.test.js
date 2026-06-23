@@ -9,7 +9,7 @@ function ratings(count, overrides = {}) {
   return Array.from({ length: count }, (_, index) => ({
     run_date: "2026-06-22",
     symbol: `S${index}`,
-    model_version: "2026-06-22-v5",
+    model_version: "2026-06-23-v6",
     generated_at: "2026-06-23T02:00:00Z",
     ...overrides
   }));

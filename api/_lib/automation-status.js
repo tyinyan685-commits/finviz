@@ -22,7 +22,7 @@ export function summarizeAutomationStatus({ runSummary, ratings, candidateCount,
 
   let status = "healthy";
   let label = "正常";
-  let message = `v5评级已覆盖 ${currentRatingCount}/${expectedRatings} 只候选。`;
+  let message = `当前模型评级已覆盖 ${currentRatingCount}/${expectedRatings} 只候选。`;
   if (!snapshotComplete) {
     status = "waiting_snapshot";
     label = "等待快照";
@@ -36,7 +36,7 @@ export function summarizeAutomationStatus({ runSummary, ratings, candidateCount,
   } else if (currentRatingCount < expectedRatings) {
     status = "partial_rating";
     label = "部分完成";
-    message = `v5评级已完成 ${currentRatingCount}/${expectedRatings} 只，其余等待重试。`;
+    message = `当前模型评级已完成 ${currentRatingCount}/${expectedRatings} 只，其余等待重试。`;
   } else if (ageHours !== null && ageHours > 120) {
     status = "stale";
     label = "数据陈旧";

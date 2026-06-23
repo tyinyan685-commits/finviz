@@ -1,4 +1,4 @@
-export const CURRENT_RATING_MODEL_VERSION = "2026-06-22-v5";
+export const CURRENT_RATING_MODEL_VERSION = "2026-06-23-v6";
 
 function finite(value) {
   const number = Number(value);
